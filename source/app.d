@@ -17,6 +17,9 @@ struct Options{
 	@NamedArgument(["sections", "s"])
 	string[] sections;
 
+	@NamedArgument(["Interval", "i"])
+	ubyte interval = 10;
+
 	@NamedArgument(["PositiveTimeOffset", "tp"])
 	int posTimeOff = 0;
 
@@ -35,5 +38,5 @@ void run(Options args){
 	parser.relCourses = args.courses;
 	Class[] classes = parser.parse;
 	//foreach (c; classes) writeln(c);
-	writeln(generateTable(classes));
+	writeln(generateTable(classes, args.interval));
 }
