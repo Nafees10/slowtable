@@ -13,12 +13,13 @@ string generateTable(Class[] classesUnsorted){
 	TimeOfDay timeMin = timeExtremes[0], timeMax = timeExtremes[1];
 	string ret =
 `<style>
-table{border-collapse:collapse;}
+table{border-collapse:collapse;text-align:center;width:100%;}
 table td, table th{border:1px solid black;}
 table tr:first-child th{border-top:0;}
 table tr:last-child td{border-bottom:0;}
 table tr td:first-child,table tr th:first-child{border-left:0;}
 table tr td:last-child,table tr th:last-child{border-right:0;}
+tr:nth-child(even){background-color:#f2f2f2;}
 </style>
 <table style='width:100%;border: solid 1px'><tr><th>Day</th><th>Venue</th>`;
 
@@ -67,7 +68,7 @@ table tr td:last-child,table tr th:last-child{border-right:0;}
 		}
 		ret = ret.chomp("<tr>");
 
-		ret ~= "</tr>";
+		ret ~= "</tr><tr><th></th><th></th></tr>";
 	}
 
 	ret ~= "</table>";
