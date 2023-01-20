@@ -1,0 +1,15 @@
+{
+	"authors": [
+		"nafees"
+	],
+	"copyright": "Copyright © 2023, nafees",
+	"dependencies": {
+		"argparse": "~>1.2.0",
+		"utils": "~>0.7.0",
+		"dxml": "~>0.3.2",
+		"archive": "~>0.6.0"
+	},
+	"description": "Timetable calculator",
+	"license": "MIT",
+	"name": "fastable"
+}
