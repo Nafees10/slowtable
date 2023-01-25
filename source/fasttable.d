@@ -85,6 +85,20 @@ private:
 	/// sheet
 	ODSSheet _sheet;
 
+	/// Returns: true if a course is relevant
+	bool _isRelevant(string section, string course){
+		return
+			(((!coursesRel || matches(course, coursesRel))
+				&&
+				(!sectionsRel || matches(section, sectionsRel))
+			 )
+			 ||
+			 matches([section, course], coursesSectionRel)
+			) &&
+			!matches(course, coursesNeg) && !matches(section, sectionsNeg) &&
+			!matches([section, course], coursesSectionNeg);
+	}
+
 	/// parses a row
 	/// Returns: Class[], Classes found in that row
 	Class[] _parseRow(string[] row, ref DayOfWeek day){
@@ -108,8 +122,7 @@ private:
 				i += count;
 				continue;
 			}
-			if ((relCourses && !matches(sectionClass[1], relCourses)) ||
-					(relSections && !matches(sectionClass[0], relSections))){
+			if (!_isRelevant(sectionClass[0], sectionClass[1])){
 				i += count;
 				continue;
 			}
@@ -128,9 +141,17 @@ public:
 	/// Duration per column
 	Duration colDur;
 	/// relevant courses. null -> all relevant
-	string[] relCourses;
+	string[] coursesRel;
 	/// relevant sections. null -> all relevant
-	string[] relSections;
+	string[] sectionsRel;
+	/// irrelevant courses
+	string[] coursesNeg;
+	/// irrelevant sections
+	string[] sectionsNeg;
+	/// relevant [section, course] combos
+	string[2][] coursesSectionRel;
+	/// irrelevant [section, course] combos
+	string[2][] coursesSectionNeg;
 
 	/// constructor
 	this (string filename, uint sheet = 0){
@@ -166,6 +187,17 @@ public:
 bool matches(string str, string[] patterns){
 	foreach (pattern; patterns){
 		if (matchFirst(str, pattern))
+			return true;
+	}
+	return false;
+}
+/// ditto
+bool matches(size_t count)(string[count] strs, string[count][] patterns){
+	foreach (pattern; patterns){
+		bool match = true;
+		static foreach (i; 0 .. count)
+			match = match && matchFirst(strs[i], pattern[i]);
+		if (match)
 			return true;
 	}
 	return false;
@@ -215,6 +247,14 @@ string[2] separateSectionCourse(string str) pure {
 	if (start < 0 || end <= start)
 		throw new Exception("Failed to read section in string `" ~ str ~ '`');
 	return [str[start + 1 .. end].strip, str[0 .. start].strip];
+}
+/// ditto
+string[2][] separateSectionCourse(string[] str) pure {
+	string[2][] ret;
+	ret.length = str.length;
+	foreach (i, s; str)
+		ret[i] = separateSectionCourse(s);
+	return ret;
 }
 
 /// Tries to separate section from course.

@@ -14,8 +14,20 @@ struct Options{
 	@NamedArgument(["courses", "c"])
 	string[] courses;
 
+	@NamedArgument(["negated-courses", "nc"])
+	string[] coursesNeg;
+
 	@NamedArgument(["sections", "s"])
 	string[] sections;
+
+	@NamedArgument(["negated-sections", "ns"])
+	string[] sectionsNeg;
+
+	@NamedArgument(["courses-section", "cs"])
+	string[] coursesSection;
+
+	@NamedArgument(["negated-courses-section", "ncs"])
+	string[] coursesSectionNeg;
 
 	@NamedArgument(["Interval", "i"])
 	ubyte interval = 10;
@@ -33,10 +45,17 @@ void run(Options args){
 	const int timeOffset = args.posTimeOff - args.negTimeOff;
 	Parser parser = new Parser(args.file);
 	parser.timeOffset = dur!"minutes"(timeOffset);
-	parser.colDur = dur!"minutes"(10); // 1 column is 10 minutes
-	parser.relSections = args.sections;
-	parser.relCourses = args.courses;
+	parser.colDur = dur!"minutes"(args.interval);
+
+	parser.sectionsRel = args.sections;
+	parser.coursesRel = args.courses;
+
+	parser.sectionsNeg = args.sectionsNeg;
+	parser.coursesNeg = args.coursesNeg;
+
+	parser.coursesSectionRel = separateSectionCourse(args.coursesSection);
+	parser.coursesSectionNeg = separateSectionCourse(args.coursesSectionNeg);
+
 	Class[] classes = parser.parse;
-	//foreach (c; classes) writeln(c);
 	writeln(generateTable(classes, args.interval));
 }
