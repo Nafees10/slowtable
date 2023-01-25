@@ -6,6 +6,19 @@ import std.datetime;
 import std.conv;
 
 import fasttable;
+import colors;
+
+/// Generates css color styles for sections
+/// Returns: css color styles for section string
+string[string] colorize(Class[] classes){
+	string[string] ret;
+	foreach (c; classes){
+		if (c.section in ret)
+			continue;
+		ret[c.section] = COLORS[ret.length % $].toCSS;
+	}
+	return ret;
+}
 
 /// Generates a HTML table for classes
 string generateTable(Class[] classesUnsorted, uint interval){
@@ -31,6 +44,8 @@ tr:nth-child(even){background-color:#f2f2f2;}
 		foreach (ref classesByVenue; classesOfDay)
 			classesSort(classesByVenue);
 	}
+
+	string[string] colors = colorize(classesUnsorted);
 
 	// populate the whole table
 	const uint minutesMax = (timeMax.hour + 1) * 60 + timeMax.minute;
@@ -62,8 +77,9 @@ tr:nth-child(even){background-color:#f2f2f2;}
 					ret ~= "<td colspan=" ~ ((minutes - x) / interval).to!string ~
 						"></td>";
 				}
-				ret ~= "<td colspan=" ~ (c.duration.total!"minutes" / interval).to!string
-					~ ">" ~ c.name ~ " - " ~ c.section ~ "</td>";
+				ret ~= "<td style=\"" ~ colors[c.section] ~ "\" colspan=" ~
+					(c.duration.total!"minutes" / interval).to!string ~ ">" ~
+					c.name ~ " - " ~ c.section ~ "</td>";
 				x = minutes + cast(uint)c.duration.total!"minutes";
 			}
 			if (minutesMax > x){
