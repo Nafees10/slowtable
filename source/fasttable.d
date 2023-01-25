@@ -88,11 +88,8 @@ private:
 	/// Returns: true if a course is relevant
 	bool _isRelevant(string section, string course){
 		return
-			(((!coursesRel || matches(course, coursesRel))
-				&&
-				(!sectionsRel || matches(section, sectionsRel))
-			 )
-			 ||
+			(
+			 matches(course, coursesRel) || matches(section, sectionsRel) ||
 			 matches([section, course], coursesSectionRel)
 			) &&
 			!matches(course, coursesNeg) && !matches(section, sectionsNeg) &&
