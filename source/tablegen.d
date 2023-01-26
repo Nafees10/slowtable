@@ -48,13 +48,13 @@ tr:nth-child(even){background-color:#f2f2f2;}
 	string[string] colors = colorize(classesUnsorted);
 
 	// populate the whole table
+	ret ~= "<table style='width:100%;border:solid 1px;'>";
 	const uint minutesMax = (timeMax.hour + 1) * 60 + timeMax.minute;
 	foreach (dayI; DayOfWeek.mon .. DayOfWeek.sat + 1){
 		const DayOfWeek day = cast(DayOfWeek)dayI;
 		if (day !in classes)
 			continue;
-		ret ~= "<table style='width:100%;border: solid 1px'><tr>" ~
-			"<th rowspan=2>Day</th><th rowspan=2>Venue</th>";
+		ret ~= "<tr><th rowspan=2>Day</th><th rowspan=2>Venue</th>";
 		// generate timing legend
 		foreach (hour; timeMin.hour .. timeMax.hour + 1)
 			ret ~= "<th colspan=6>" ~ hour.to12hr ~ "</th>";
@@ -62,7 +62,7 @@ tr:nth-child(even){background-color:#f2f2f2;}
 		foreach (hour; timeMin.hour .. timeMax.hour + 1){
 			foreach (minute; 0 .. 60 / interval){
 				minute *= interval;
-				ret ~= "<th>" ~ minute.to!string ~ "</th>";
+				ret ~= "<th style='table-style:fixed;'>" ~ minute.to!string ~ "</th>";
 			}
 		}
 		ret ~= "<tr><th rowspan=" ~ classes[day].length.to!string ~ ">" ~
