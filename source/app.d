@@ -32,10 +32,10 @@ struct Options{
 	@NamedArgument(["Interval", "i"])
 	ubyte interval = 10;
 
-	@NamedArgument(["PositiveTimeOffset", "tp"])
+	@NamedArgument(["positive-time-offset", "tp"])
 	int posTimeOff = 0;
 
-	@NamedArgument(["NegativeTimeOffset", "np"])
+	@NamedArgument(["negative-time-offset", "np"])
 	int negTimeOff = 10;
 }
 version (unittest) {} else
