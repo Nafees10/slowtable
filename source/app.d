@@ -50,7 +50,8 @@ void run(Options args){
 	parser.sectionsRel = args.sections;
 	parser.coursesRel = args.courses;
 	if (!args.courses.length &&
-			!args.coursesSection.length)
+			!args.coursesSection.length &&
+			!args.sections.length)
 		parser.coursesRel = [".*"];
 
 	parser.sectionsNeg = args.sectionsNeg;
