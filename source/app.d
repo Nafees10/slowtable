@@ -1,5 +1,6 @@
 import std.stdio;
 import std.datetime;
+import std.json;
 
 import argparse;
 
@@ -25,6 +26,14 @@ struct Options{
 
 	@NamedArgument(["courses-section", "cs"])
 	string[] coursesSection;
+
+	enum Format{
+		html,
+		json
+	}
+
+	@NamedArgument(["format", "f"])
+	Format format = Format.html;
 
 	@NamedArgument(["negated-courses-section", "ncs"])
 	string[] coursesSectionNeg;
@@ -61,5 +70,13 @@ void run(Options args){
 	parser.coursesSectionNeg = separateSectionCourse(args.coursesSectionNeg);
 
 	Class[] classes = parser.parse;
-	writeln(generateTable(classes, args.interval));
+	if (args.format == args.Format.html){
+		writeln(generateTable(classes, args.interval));
+		return;
+	}
+	JSONValue[] jsonClasses;
+	jsonClasses.length = classes.length;
+	foreach (i, c; classes)
+		jsonClasses[i] = c.toJSON;
+	writeln(JSONValue(jsonClasses).toPrettyString);
 }

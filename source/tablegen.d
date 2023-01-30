@@ -20,11 +20,8 @@ private string[string] colorize(Class[] classes){
 	return ret;
 }
 
-/// Generates a HTML table for classes
-string generateTable(Class[] classesUnsorted, uint interval){
-	TimeOfDay[2] timeExtremes = classesTimeMinMax(classesUnsorted);
-	TimeOfDay timeMin = timeExtremes[0], timeMax = timeExtremes[1];
-	string ret =
+/// style tag for table
+enum HTML_STYLE =
 `<style>
 table{border-collapse:collapse;text-align:center;width:100%;}
 table td, table th{border:1px solid black;}
@@ -35,11 +32,13 @@ table tr td:last-child,table tr th:last-child{border-right:0;}
 tr:nth-child(even){background-color:#f2f2f2;}
 </style>`;
 
-	Class[][string][DayOfWeek] classes; // classes by Day, and Venue
-	// sort out the mess
-	foreach (c; classesUnsorted){
-		classes[c.day][c.venue] ~= c;
-	}
+/// Generates a HTML table for classes
+string generateTable(Class[] classesUnsorted, uint interval){
+	TimeOfDay[2] timeExtremes = classesTimeMinMax(classesUnsorted);
+	TimeOfDay timeMin = timeExtremes[0], timeMax = timeExtremes[1];
+	string ret = HTML_STYLE;
+
+	Class[][string][DayOfWeek] classes = classesSortByDayVenue(classesUnsorted);
 	foreach (ref classesOfDay; classes){
 		foreach (ref classesByVenue; classesOfDay)
 			classesSortByTime(classesByVenue);

@@ -5,13 +5,11 @@ import std.regex;
 import std.string;
 import std.datetime;
 import std.conv;
+import std.json;
 
 import ods;
 
 import utils.misc : isAlphabet, isNum;
-
-version(unittest) import std.stdio;
-debug import std.stdio;
 
 /// Stores information about a single class session
 struct Class{
@@ -28,7 +26,7 @@ struct Class{
 	/// venue
 	string venue;
 
-	/// Returns: string representation
+	/// Returns: string representation as `{name section venue (day, start-end)}`
 	string toString() const {
 		return format!"{%s %s %s (%s, %s-%s)}"(
 				name, section, venue, day, time, time + duration);
@@ -41,6 +39,17 @@ struct Class{
 		ret = day << 20;
 		ret |= (dur!"hours"(time.hour) + dur!"minutes"(time.minute) +
 			dur!"seconds"(time.second)).total!"seconds";
+		return ret;
+	}
+
+	JSONValue toJSON() const {
+		JSONValue ret;
+		ret["day"] = JSONValue(day.to!string);
+		ret["time"] = JSONValue(time.toString);
+		ret["duration"] = JSONValue(duration.total!"minutes");
+		ret["name"] = JSONValue(name);
+		ret["section"] = JSONValue(section);
+		ret["venue"] = JSONValue(venue);
 		return ret;
 	}
 }
@@ -65,6 +74,13 @@ unittest{
 /// Sorts classes by time
 void classesSortByTime(ref Class[] classes){
 	classes.sort!"a.timeEncode < b.timeEncode";
+}
+/// Sorts classes by venue and day
+Class[][string][DayOfWeek] classesSortByDayVenue(Class[] classes){
+	Class[][string][DayOfWeek] ret;
+	foreach (c; classes)
+		ret[c.day][c.venue] ~= c;
+	return ret;
 }
 
 /// Finds earliest starting time, and latest ending time
