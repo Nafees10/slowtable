@@ -10,7 +10,7 @@ import colors;
 
 /// Generates css color styles for sections
 /// Returns: css color styles for section string
-string[string] colorize(Class[] classes){
+private string[string] colorize(Class[] classes){
 	string[string] ret;
 	foreach (c; classes){
 		if (c.section in ret)
@@ -42,7 +42,7 @@ tr:nth-child(even){background-color:#f2f2f2;}
 	}
 	foreach (ref classesOfDay; classes){
 		foreach (ref classesByVenue; classesOfDay)
-			classesSort(classesByVenue);
+			classesSortByTime(classesByVenue);
 	}
 
 	string[string] colors = colorize(classesUnsorted);
