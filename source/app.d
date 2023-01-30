@@ -3,7 +3,7 @@ import std.datetime;
 
 import argparse;
 
-import fasttable;
+import slowtable;
 import tablegen;
 
 /// CLI options

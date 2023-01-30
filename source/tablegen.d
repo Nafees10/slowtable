@@ -5,7 +5,7 @@ import std.string;
 import std.datetime;
 import std.conv;
 
-import fasttable;
+import slowtable;
 import colors;
 
 /// Generates css color styles for sections
