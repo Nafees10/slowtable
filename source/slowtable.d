@@ -1,4 +1,4 @@
-module fasttable;
+module slowtable;
 
 import std.algorithm;
 import std.regex;
