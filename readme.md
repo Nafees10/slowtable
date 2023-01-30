@@ -47,8 +47,44 @@ From there onwards, slowtable can be run:
 Running the above will generate a HTML file containing exact same contents as
 original timetable. Use filters (read below) to filter out irrelevant courses
 and sections.
-
 The generated HTML file can be opened by a web browser.
+
+### JSON output
+Alternatively, the filtered or interpreted data can be printed as JSON values,
+for example, to be used in another program etc.  
+This is done using the `-f json` option. For example:
+```bash
+./slowtable input.ods -cs 'database (SE-4A)' -f json > classes.json
+```
+Will produce the following content in `classes.json` file:
+```json
+[
+	{
+		"day": "mon",
+		"duration": 170,
+		"name": "database systems lab",
+		"section": "BSE-4A",
+		"time": "08:30:00",
+		"venue": "Lab(CS-4)"
+	},
+	{
+		"day": "tue",
+		"duration": 80,
+		"name": "database systems",
+		"section": "BSE-4A",
+		"time": "11:30:00",
+		"venue": "E&M-2"
+	},
+	{
+		"day": "thu",
+		"duration": 80,
+		"name": "database systems",
+		"section": "BSE-4A",
+		"time": "11:30:00",
+		"venue": "E&M-2"
+	}
+]
+```
 
 ## Filtering
 
