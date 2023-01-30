@@ -8,7 +8,7 @@ import std.conv;
 
 import ods;
 
-import utils.sort;
+import utils.misc : isAlphabet, isNum;
 
 version(unittest) import std.stdio;
 debug import std.stdio;
@@ -39,7 +39,8 @@ struct Class{
 	@property uint timeEncode() const {
 		uint ret;
 		ret = day << 20;
-		ret |= (((time.hour * 60) + time.minute) * 60) + time.second;
+		ret |= (dur!"hours"(time.hour) + dur!"minutes"(time.minute) +
+			dur!"seconds"(time.second)).total!"seconds";
 		return ret;
 	}
 }
@@ -62,7 +63,7 @@ unittest{
 }
 
 /// Sorts classes by time
-void classesSort(ref Class[] classes){
+void classesSortByTime(ref Class[] classes){
 	classes.sort!"a.timeEncode < b.timeEncode";
 }
 
@@ -114,11 +115,12 @@ private:
 			const uint count = countConsecutive(row[i .. $]);
 			if (!count)
 				break;
-			string[2] sectionClass;
-			if (!trySeparateSectionCourse(row[i], sectionClass)){
+			string[2] sectionClass = separateSectionCourse(row[i]);
+			if (!sectionClass[1].length){
 				i += count;
 				continue;
 			}
+			sectionClass[1] = sectionClass[1].courseNameClean;
 			if (!_isRelevant(sectionClass[0], sectionClass[1])){
 				i += count;
 				continue;
@@ -128,7 +130,7 @@ private:
 			ret ~= c;
 			i += count;
 		}
-		ret.classesSort;
+		ret.classesSortByTime;
 		return ret;
 	}
 
@@ -180,8 +182,28 @@ public:
 	}
 }
 
+/// Cleans up course name
+/// removes non-alphanumeric characters, minimizes spaces to maximum 1,
+/// lowercases
+/// Returns: clean name
+private string courseNameClean(string course){
+	string ret;
+	for (uint i = 0; i < course.length; i ++){
+		if (isAlphabet(course[i .. i + 1]) || isNum(course[i .. i + 1], false)){
+			ret ~= course[i] + (32 * (course[i] >= 'A' && course[i] <= 'Z'));
+			continue;
+		}
+		if (course[i] == ' '){
+			ret ~= ' ';
+			while (i + 1 < course.length && course[i + 1] == ' ')
+				i ++;
+		}
+	}
+	return ret.strip;
+}
+
 /// Returns: true if a string matches in a list of patterns
-bool matches(string str, string[] patterns){
+private bool matches(string str, string[] patterns){
 	foreach (pattern; patterns){
 		if (matchFirst(str, pattern))
 			return true;
@@ -189,7 +211,7 @@ bool matches(string str, string[] patterns){
 	return false;
 }
 /// ditto
-bool matches(size_t count)(string[count] strs, string[count][] patterns){
+private bool matches(size_t count)(string[count] strs, string[count][] patterns){
 	foreach (pattern; patterns){
 		bool match = true;
 		static foreach (i; 0 .. count)
@@ -203,7 +225,7 @@ bool matches(size_t count)(string[count] strs, string[count][] patterns){
 /// Finds DayOfWeek from sheet string
 /// Returns: DayOfWeek
 /// Throws: Exception if not found
-DayOfWeek readDay(string str) pure {
+private DayOfWeek readDay(string str) pure {
 	if (str.canFind("Monday"))
 		return DayOfWeek.mon;
 	if (str.canFind("Tuesday"))
@@ -222,7 +244,7 @@ DayOfWeek readDay(string str) pure {
 }
 
 /// Returns: true if readDay was successful
-bool tryReadDay(string str, ref DayOfWeek day){
+private bool tryReadDay(string str, ref DayOfWeek day){
 	try{
 		day = readDay(str);
 		return true;
@@ -231,18 +253,17 @@ bool tryReadDay(string str, ref DayOfWeek day){
 	}
 }
 /// ditto
-bool tryReadDay(string str){
+private bool tryReadDay(string str){
 	DayOfWeek dummy;
 	return tryReadDay(str, dummy);
 }
 
 /// Separates section from course.
 /// Returns: [section, course], string array length 2
-/// Throws: Exception if failed
-string[2] separateSectionCourse(string str) pure {
+private string[2] separateSectionCourse(string str) pure {
 	const int start = cast(int)str.indexOf('('), end = cast(int)str.indexOf(')');
 	if (start < 0 || end <= start)
-		throw new Exception("Failed to read section in string `" ~ str ~ '`');
+		return [null, str];
 	return [str[start + 1 .. end].strip, str[0 .. start].strip];
 }
 /// ditto
@@ -254,25 +275,9 @@ string[2][] separateSectionCourse(string[] str) pure {
 	return ret;
 }
 
-/// Tries to separate section from course.
-/// Returns: true if done, false if not
-bool trySeparateSectionCourse(string str, ref string[2] ret) pure {
-	try{
-		ret = separateSectionCourse(str);
-		return true;
-	}catch (Exception e){
-		return false;
-	}
-}
-/// ditto
-bool trySeparateSectionCourse(string str) pure {
-	string[2] dummy;
-	return trySeparateSectionCourse(str, dummy);
-}
-
 /// counts how many times, consecutive, the first element occurs
 /// Returns: count, or 0 if array length 0
-uint countConsecutive(T)(T[] array) pure {
+private uint countConsecutive(T)(T[] array) pure {
 	uint ret;
 	foreach (elem; array){
 		if (elem == array[0])
