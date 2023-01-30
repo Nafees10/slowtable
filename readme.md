@@ -1,4 +1,4 @@
-# fastable
+# slowtable
 Tool to clean up timetable sent by FAST NUCES.
 
 ---
@@ -23,11 +23,11 @@ Tool to clean up timetable sent by FAST NUCES.
 
 Run the following to clone and build:
 ```bash
-git clone https://github.com/Nafees10/fastable
-cd fastable
+git clone https://github.com/Nafees10/slowtable
+cd slowtable
 dub build -b=release
 ```
-This will create a binary named `fastable`.
+This will create a binary named `slowtable`.
 
 ---
 
@@ -37,9 +37,9 @@ First to convert an xlsx timetable file to ods, run the following:
 libreoffice --headless --convert-to ods path/to/timetable.xlsx
 ```
 
-From there onwards, fastable can be run:
+From there onwards, slowtable can be run:
 ```bash
-./fastable path/to/converted/timetable.ods [commands] > output.html
+./slowtable path/to/converted/timetable.ods [commands] > output.html
 ```
 
 Running the above will generate a HTML file containing exact same contents as
@@ -58,19 +58,19 @@ Use the `-s` flag to filter for sections.
 For example, to only include courses for all sections of `BSE-4`, run the
 following:
 ```bash
-./fastable input.ods -s BSE-4 > table.html
+./slowtable input.ods -s BSE-4 > table.html
 ```
 
 To only include courses for `BSE-4A` and `BCS-4A`, run the following:
 ```bash
-./fastable input.ods -s BSE-4A BCS-4A > table.html
+./slowtable input.ods -s BSE-4A BCS-4A > table.html
 ```
 
 ### `-ns` section
 Use the `-ns` flag to filter _out_ a section.
 For example, to exclude all Masters courses, while keeping all BS courses:
 ```
-./fastable input.ods -ns 'M\S\S-' > table.html
+./slowtable input.ods -ns 'M\S\S-' > table.html
 ```
 this uses the regex filter `M\S\S` to match any section that begins with M followed by 2 alphabets followed by a `-`.
 
@@ -80,14 +80,14 @@ specific course.
 For example, to include all sections of Object Oriented Programming, run the
 following:
 ```bash
-./fastable input.ods -c 'Object Oriented Programming' > table.html
+./slowtable input.ods -c 'Object Oriented Programming' > table.html
 ```
 
 ### `-nc` course
 Use the `-nc` flag to filter _out_ a course.
 For example, to include all courses of BSE-4, except for `Data Structures`:
 ```bash
-./fastable input.ods -s BSE-4 -nc 'Data Structures' > table.html
+./slowtable input.ods -s BSE-4 -nc 'Data Structures' > table.html
 ```
 
 ### `-cs` course (section)
@@ -95,7 +95,7 @@ Use the `-cs` flag to include a specific course of a specific section.
 For example, to include all `BSE-4A` courses, along with
 `Database Systems (BSE-4B)`:
 ```bash
-./fastable input.ods -s BSE-4A -cs 'Database (BSE-4B)' > table.html
+./slowtable input.ods -s BSE-4A -cs 'Database (BSE-4B)' > table.html
 ```
 
 ### `-ncs` course (section)
@@ -103,7 +103,7 @@ Use the `-cs` flag to exclude a specific course of a specific section.
 For example, to include all `BSE-4` courses, except for
 `Software Design .. (BSE-4B)`:
 ```bash
-./fastable input.ods -s BSE-4 -ncs 'Software Design (BSE-4B)' > table.html
+./slowtable input.ods -s BSE-4 -ncs 'Software Design (BSE-4B)' > table.html
 ```
 
 ---
