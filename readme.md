@@ -58,32 +58,34 @@ This is done using the `-f json` option. For example:
 ```
 Will produce the following content in `classes.json` file:
 ```json
-[
-	{
-		"day": "mon",
-		"duration": 170,
-		"name": "database systems lab",
-		"section": "BSE-4A",
-		"time": "08:30:00",
-		"venue": "Lab(CS-4)"
-	},
-	{
-		"day": "tue",
-		"duration": 80,
-		"name": "database systems",
-		"section": "BSE-4A",
-		"time": "11:30:00",
-		"venue": "E&M-2"
-	},
-	{
-		"day": "thu",
-		"duration": 80,
-		"name": "database systems",
-		"section": "BSE-4A",
-		"time": "11:30:00",
-		"venue": "E&M-2"
-	}
-]
+{
+	"classes": [
+		{
+			"day": "mon",
+			"duration": 170,
+			"name": "database systems lab",
+			"section": "BSE-4A",
+			"time": "08:30:00",
+			"venue": "Lab(CS-4)"
+		},
+		{
+			"day": "tue",
+			"duration": 80,
+			"name": "database systems",
+			"section": "BSE-4A",
+			"time": "11:30:00",
+			"venue": "E&M-2"
+		},
+		{
+			"day": "thu",
+			"duration": 80,
+			"name": "database systems",
+			"section": "BSE-4A",
+			"time": "11:30:00",
+			"venue": "E&M-2"
+		}
+	]
+}
 ```
 
 ## Filtering

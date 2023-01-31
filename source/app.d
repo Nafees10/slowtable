@@ -74,9 +74,11 @@ void run(Options args){
 		writeln(generateTable(classes, args.interval));
 		return;
 	}
-	JSONValue[] jsonClasses;
-	jsonClasses.length = classes.length;
+	JSONValue[] jsonArray;
+	jsonArray.length = classes.length;
 	foreach (i, c; classes)
-		jsonClasses[i] = c.toJSON;
-	writeln(JSONValue(jsonClasses).toPrettyString);
+		jsonArray[i] = c.toJSON;
+	JSONValue classesJson;
+	classesJson["classes"] = jsonArray;
+	writeln(JSONValue(classesJson).toPrettyString);
 }
