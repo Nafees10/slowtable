@@ -5,6 +5,7 @@
 	"copyright": "Copyright © 2023, nafees",
 	"dependencies": {
 		"argparse": "~>1.2.0",
+		"utils": "~>0.7.0",
 		"ods": "~>0.0.2"
 	},
 	"description": "Timetable calculator",
