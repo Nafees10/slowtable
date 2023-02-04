@@ -171,6 +171,7 @@ public:
 	/// constructor
 	this (string filename, uint sheet = 0){
 		_sheet = new ODSSheet();
+		_sheet.repeatMergedCells = true;
 		_sheet.readSheet(filename, sheet);
 	}
 	~this(){
