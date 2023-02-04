@@ -159,4 +159,4 @@ For example, to include all `BSE-4` courses, except for
 ---
 
 ## Acknowledgments
-This program uses a modified version of TransientResponse's [`dlang-ods`](https://github.com/TransientResponse/dlang-ods) library.
+This program uses TransientResponse's [`dlang-ods`](https://github.com/TransientResponse/dlang-ods) library.
