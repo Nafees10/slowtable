@@ -1,11 +1,11 @@
-module slowtable;
+module parser;
 
-import std.algorithm;
-import std.regex;
-import std.string;
-import std.datetime;
-import std.conv;
-import std.json;
+import std.algorithm,
+			 std.regex,
+			 std.string,
+			 std.datetime,
+			 std.conv,
+			 std.json;
 
 import ods;
 
@@ -72,24 +72,27 @@ unittest{
 	}
 }
 
-import utils.sort;
-
 /// Sorts classes by time
-void classesSortByTime(ref Class[] classes){
+void sortByTime(ref Class[] classes){
 	classes.sort!"a.timeEncode < b.timeEncode";
 }
 
 /// Sorts classes by venue and day
-Class[][string][DayOfWeek] classesSortByDayVenue(Class[] classes){
+Class[][string][DayOfWeek] sortByDayVenueTime(Class[] classes){
 	Class[][string][DayOfWeek] ret;
 	foreach (c; classes)
 		ret[c.day][c.venue] ~= c;
+	foreach (day, dayClasses; ret){
+		foreach (venue, ref venueClasses; dayClasses){
+			venueClasses.sortByTime;
+		}
+	}
 	return ret;
 }
 
 /// Finds earliest starting time, and latest ending time
 /// Returns: [starting time, ending time]
-TimeOfDay[2] classesTimeMinMax(Class[] classes){
+TimeOfDay[2] timeMinMax(Class[] classes){
 	TimeOfDay min = TimeOfDay.max, max = TimeOfDay.min;
 	foreach (c; classes){
 		if (c.time < min)
@@ -100,20 +103,28 @@ TimeOfDay[2] classesTimeMinMax(Class[] classes){
 	return [min, max];
 }
 
+/// Separates section from course.
+/// Returns: [section, course], string array length 2
+string[2] separateSectionCourse(string str) pure {
+	const int start = cast(int)str.indexOf('('), end = cast(int)str.indexOf(')');
+	if (start < 0 || end <= start)
+		return [null, str];
+	return [str[start + 1 .. end].strip, str[0 .. start].strip];
+}
+/// ditto
+string[2][] separateSectionCourse(string[] str) pure {
+	string[2][] ret;
+	ret.length = str.length;
+	foreach (i, s; str)
+		ret[i] = separateSectionCourse(s);
+	return ret;
+}
+
 /// Parser for timetable
 class Parser{
 private:
 	/// sheet
 	ODSSheet _sheet;
-
-	/// Returns: true if a course is relevant
-	bool _isRelevant(string section, string course){
-		return
-			(matches(course, coursesRel) || matches(section, sectionsRel) ||
-			 matches([section, course], coursesSectionRel)) &&
-			!matches(course, coursesNeg) && !matches(section, sectionsNeg) &&
-			!matches([section, course], coursesSectionNeg);
-	}
 
 	/// parses a row
 	/// Returns: Class[], Classes found in that row
@@ -138,17 +149,11 @@ private:
 				i += count;
 				continue;
 			}
-			sectionClass[1] = sectionClass[1].courseNameClean;
-			if (!_isRelevant(sectionClass[0], sectionClass[1])){
-				i += count;
-				continue;
-			}
 			Class c = Class(day, TimeOfDay(8,0) + (colDur * i) + timeOffset,
 					colDur * count, sectionClass[1], sectionClass[0],venue);
 			ret ~= c;
 			i += count;
 		}
-		ret.classesSortByTime;
 		return ret;
 	}
 
@@ -201,46 +206,6 @@ public:
 	}
 }
 
-/// Cleans up course name
-/// removes non-alphanumeric characters, minimizes spaces to maximum 1,
-/// lowercases
-/// Returns: clean name
-private string courseNameClean(string course){
-	string ret;
-	for (uint i = 0; i < course.length; i ++){
-		if (isAlphabet(course[i .. i + 1]) || isNum(course[i .. i + 1], false)){
-			ret ~= course[i] + (32 * (course[i] >= 'A' && course[i] <= 'Z'));
-			continue;
-		}
-		if (course[i] == ' '){
-			ret ~= ' ';
-			while (i + 1 < course.length && course[i + 1] == ' ')
-				i ++;
-		}
-	}
-	return ret.strip;
-}
-
-/// Returns: true if a string matches in a list of patterns
-private bool matches(string str, string[] patterns){
-	foreach (pattern; patterns){
-		if (matchFirst(str, pattern))
-			return true;
-	}
-	return false;
-}
-/// ditto
-private bool matches(size_t count)(string[count] strs, string[count][] patterns){
-	foreach (pattern; patterns){
-		bool match = true;
-		static foreach (i; 0 .. count)
-			match = match && matchFirst(strs[i], pattern[i]);
-		if (match)
-			return true;
-	}
-	return false;
-}
-
 /// Finds DayOfWeek from sheet string
 /// Returns: DayOfWeek
 /// Throws: Exception if not found
@@ -275,23 +240,6 @@ private bool tryReadDay(string str, ref DayOfWeek day){
 private bool tryReadDay(string str){
 	DayOfWeek dummy;
 	return tryReadDay(str, dummy);
-}
-
-/// Separates section from course.
-/// Returns: [section, course], string array length 2
-private string[2] separateSectionCourse(string str) pure {
-	const int start = cast(int)str.indexOf('('), end = cast(int)str.indexOf(')');
-	if (start < 0 || end <= start)
-		return [null, str];
-	return [str[start + 1 .. end].strip, str[0 .. start].strip];
-}
-/// ditto
-string[2][] separateSectionCourse(string[] str) pure {
-	string[2][] ret;
-	ret.length = str.length;
-	foreach (i, s; str)
-		ret[i] = separateSectionCourse(s);
-	return ret;
 }
 
 /// counts how many times, consecutive, the first element occurs
