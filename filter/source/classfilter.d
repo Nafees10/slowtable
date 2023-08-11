@@ -1,8 +1,8 @@
-module slowtable.filter;
+module classfilter;
 
 import std.regex;
 
-import slowtable.common;
+import common;
 
 /// set of filters
 struct Filters{
@@ -34,6 +34,11 @@ bool matches(Filters filters, string section, string course){
 		!matches(course, filters.coursesNeg) &&
 		!matches(section, filters.sectionsNeg) &&
 		!matches([section, course], filters.coursesSectionNeg);
+}
+
+/// ditto
+bool matches(Filters filters, Class c){
+	return matches(filters, c.section, c.name);
 }
 
 /// Returns: true if a string matches in a list of patterns
