@@ -49,7 +49,7 @@ void run(Options opts){
 	foreach (i, classesJson; timetables){
 		JSONValue[] classes = classesJson.get!(JSONValue[]);
 		JSONValue[] filtered;
-		foreach (c; classes.filter!(a => matches(filters,Class(a))))
+		foreach (c; classes.filter!(a => matches(filters, Class(a))))
 			filtered ~= c;
 		timetables[i] = JSONValue(filtered);
 	}
