@@ -1,3 +1,6 @@
+**this documentation is outdated for this current code. Use latest release
+from [here](https://github.com/Nafees10/slowtable/releases/latest)**
+
 # slowtable
 Tool to clean up timetable sent by FAST NUCES.
 
