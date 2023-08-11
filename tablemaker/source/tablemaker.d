@@ -100,7 +100,7 @@ tr:nth-child(even){background-color:#f2f2f2;}
 string generateTable(Class[] classesUnsorted, uint interval){
 	TimeOfDay[2] timeExtremes = classesTimeMinMax(classesUnsorted);
 	TimeOfDay timeMin = timeExtremes[0], timeMax = timeExtremes[1];
-	string ret = HTML_STYLE;
+	string ret;
 
 	Class[][string][DayOfWeek] classes = classesSortByDayVenue(classesUnsorted);
 	foreach (ref classesOfDay; classes){
