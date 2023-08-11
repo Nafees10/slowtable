@@ -1,4 +1,4 @@
-module slowtable.parser;
+module parser;
 
 import std.algorithm,
 			 std.regex,
@@ -12,7 +12,7 @@ import utils.misc : isAlphabet, isNum;
 import common;
 
 /// Parser for timetable
-class Parser{
+struct Parser{
 private:
 	/// sheet
 	ODSSheet _sheet;
