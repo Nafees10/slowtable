@@ -4,6 +4,7 @@ import std.json,
 			 std.datetime,
 			 std.format,
 			 std.algorithm,
+			 std.string,
 			 std.conv : to;
 
 /// Stores information about a single class session
@@ -120,11 +121,27 @@ TimeOfDay[2] classesTimeMinMax(Class[] classes){
 	return [min, max];
 }
 
-
 /// checks if timings (time, duration, day) of two Class coincideds. Does not
 /// check venue
 ///
 /// Returns: true if clashes
 bool overlaps(Class a, Class b) pure {
 	return a.time < b.time + b.duration && b.time < a.time + a.duration;
+}
+
+/// Separates section from course.
+/// Returns: [section, course], string array length 2
+string[2] separateSectionCourse(string str) pure {
+	const int start = cast(int)str.indexOf('('), end = cast(int)str.indexOf(')');
+	if (start < 0 || end <= start)
+		return [null, str];
+	return [str[start + 1 .. end].strip, str[0 .. start].strip];
+}
+/// ditto
+string[2][] separateSectionCourse(string[] str) pure {
+	string[2][] ret;
+	ret.length = str.length;
+	foreach (i, s; str)
+		ret[i] = separateSectionCourse(s);
+	return ret;
 }

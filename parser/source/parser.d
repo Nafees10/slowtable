@@ -143,23 +143,6 @@ private bool tryReadDay(string str){
 	return tryReadDay(str, dummy);
 }
 
-/// Separates section from course.
-/// Returns: [section, course], string array length 2
-private string[2] separateSectionCourse(string str) pure {
-	const int start = cast(int)str.indexOf('('), end = cast(int)str.indexOf(')');
-	if (start < 0 || end <= start)
-		return [null, str];
-	return [str[start + 1 .. end].strip, str[0 .. start].strip];
-}
-/// ditto
-string[2][] separateSectionCourse(string[] str) pure {
-	string[2][] ret;
-	ret.length = str.length;
-	foreach (i, s; str)
-		ret[i] = separateSectionCourse(s);
-	return ret;
-}
-
 /// counts how many times, consecutive, the first element occurs
 /// Returns: count, or 0 if array length 0
 private uint countConsecutive(T)(T[] array) pure {
