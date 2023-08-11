@@ -41,9 +41,7 @@ void run(Options opts){
 	JSONValue[] jarr = new JSONValue[classes.length];
 	foreach (i, c; classes)
 		jarr[i] = c.jsonOf;
-	JSONValue timetable;
-	timetable["timetable"] = jarr;
-	JSONValue timetables = JSONValue([timetable]);
+	JSONValue timetables = JSONValue([jarr]);
 
 	if (opts.prettyPrint)
 		writeln(timetables.toPrettyString);
