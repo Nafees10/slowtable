@@ -1,0 +1,7 @@
+name "common"
+description "slowtable common"
+authors "nafees"
+copyright "Copyright © 2023, nafees"
+license "MIT"
+targetName "common"
+targetPath "../bin"

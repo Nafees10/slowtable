@@ -1,119 +1,21 @@
-module slowtable;
+module slowtable.parser;
 
-import std.algorithm;
-import std.regex;
-import std.string;
-import std.datetime;
-import std.conv;
-import std.json;
+import std.algorithm,
+			 std.regex,
+			 std.string,
+			 std.datetime;
 
 import ods;
 
 import utils.misc : isAlphabet, isNum;
 
-/// Stores information about a single class session
-struct Class{
-	/// day this occurs
-	DayOfWeek day;
-	/// when
-	TimeOfDay time;
-	/// duration
-	Duration duration;
-	/// course name
-	string name;
-	/// section
-	string section;
-	/// venue
-	string venue;
-
-	/// Returns: string representation as `{name section venue (day, start-end)}`
-	string toString() const {
-		return format!"{%s %s %s (%s, %s-%s)}"(
-				name, section, venue, day, time, time + duration);
-	}
-
-	/// encode's time for comparison, for a Class
-	///
-	/// Returns: encoded time
-	@property uint timeEncode() const {
-		uint ret;
-		ret = day << 20;
-		ret |= (dur!"hours"(time.hour) + dur!"minutes"(time.minute) +
-			dur!"seconds"(time.second)).total!"seconds";
-		return ret;
-	}
-
-	JSONValue toJSON() const {
-		JSONValue ret;
-		ret["day"] = JSONValue(day.to!string);
-		ret["time"] = JSONValue(time.toString);
-		ret["duration"] = JSONValue(duration.total!"minutes");
-		ret["name"] = JSONValue(name);
-		ret["section"] = JSONValue(section);
-		ret["venue"] = JSONValue(venue);
-		return ret;
-	}
-}
-
-unittest{
-	Class c = Class(DayOfWeek.mon, TimeOfDay(8, 0), dur!"minutes"(120),
-			"Programming", "BSE-4A", "CS-1");
-	assert(c.to!string == "{Programming BSE-4A CS-1 (mon, 08:00:00-10:00:00)}");
-	Class a, b;
-	foreach (day; DayOfWeek.mon .. DayOfWeek.sat){
-		foreach (hour; 0 .. 24){
-			foreach (min; 0 .. 60){
-				a.time = TimeOfDay(hour, min);
-				a.day = day;
-				assert(a.timeEncode > b.timeEncode);
-				b = a;
-			}
-		}
-	}
-}
-
-import utils.sort;
-
-/// Sorts classes by time
-void classesSortByTime(ref Class[] classes){
-	classes.sort!"a.timeEncode < b.timeEncode";
-}
-
-/// Sorts classes by venue and day
-Class[][string][DayOfWeek] classesSortByDayVenue(Class[] classes){
-	Class[][string][DayOfWeek] ret;
-	foreach (c; classes)
-		ret[c.day][c.venue] ~= c;
-	return ret;
-}
-
-/// Finds earliest starting time, and latest ending time
-/// Returns: [starting time, ending time]
-TimeOfDay[2] classesTimeMinMax(Class[] classes){
-	TimeOfDay min = TimeOfDay.max, max = TimeOfDay.min;
-	foreach (c; classes){
-		if (c.time < min)
-			min = c.time;
-		if (c.time + c.duration > max)
-			max = c.time + c.duration;
-	}
-	return [min, max];
-}
+import common;
 
 /// Parser for timetable
 class Parser{
 private:
 	/// sheet
 	ODSSheet _sheet;
-
-	/// Returns: true if a course is relevant
-	bool _isRelevant(string section, string course){
-		return
-			(matches(course, coursesRel) || matches(section, sectionsRel) ||
-			 matches([section, course], coursesSectionRel)) &&
-			!matches(course, coursesNeg) && !matches(section, sectionsNeg) &&
-			!matches([section, course], coursesSectionNeg);
-	}
 
 	/// parses a row
 	/// Returns: Class[], Classes found in that row
@@ -139,10 +41,6 @@ private:
 				continue;
 			}
 			sectionClass[1] = sectionClass[1].courseNameClean;
-			if (!_isRelevant(sectionClass[0], sectionClass[1])){
-				i += count;
-				continue;
-			}
 			Class c = Class(day, TimeOfDay(8,0) + (colDur * i) + timeOffset,
 					colDur * count, sectionClass[1], sectionClass[0],venue);
 			ret ~= c;
@@ -157,18 +55,6 @@ public:
 	Duration timeOffset;
 	/// Duration per column
 	Duration colDur;
-	/// relevant courses. null -> all relevant
-	string[] coursesRel;
-	/// relevant sections. null -> all relevant
-	string[] sectionsRel;
-	/// irrelevant courses
-	string[] coursesNeg;
-	/// irrelevant sections
-	string[] sectionsNeg;
-	/// relevant [section, course] combos
-	string[2][] coursesSectionRel;
-	/// irrelevant [section, course] combos
-	string[2][] coursesSectionNeg;
 
 	/// constructor
 	this (string filename, uint sheet = 0){
@@ -219,26 +105,6 @@ private string courseNameClean(string course){
 		}
 	}
 	return ret.strip;
-}
-
-/// Returns: true if a string matches in a list of patterns
-private bool matches(string str, string[] patterns){
-	foreach (pattern; patterns){
-		if (matchFirst(str, pattern))
-			return true;
-	}
-	return false;
-}
-/// ditto
-private bool matches(size_t count)(string[count] strs, string[count][] patterns){
-	foreach (pattern; patterns){
-		bool match = true;
-		static foreach (i; 0 .. count)
-			match = match && matchFirst(strs[i], pattern[i]);
-		if (match)
-			return true;
-	}
-	return false;
 }
 
 /// Finds DayOfWeek from sheet string
@@ -306,3 +172,52 @@ private uint countConsecutive(T)(T[] array) pure {
 	}
 	return ret;
 }
+
+// new parser
+/*import std.algorithm,
+			 std.regex,
+			 std.string,
+			 std.datetime,
+			 std.conv,
+			 std.json;
+
+import ods;
+
+import utils.misc : isAlphabet, isNum;
+
+/// An entry in the sheet and its location
+struct Entry{
+	/// starting cell index
+	size_t index;
+	/// width
+	size_t width;
+	/// ending index (last index occupied by this)
+	@property size_t lastIndex() const pure {
+		return index + width - 1;
+	}
+	/// name
+	string name;
+}
+
+/// Time scale
+struct TimeScale{
+
+}
+
+Entry[] parseEntries(string[] row){
+	Entry[] ret;
+	for (size_t i = 0; i < row.length;){
+		size_t count = 1;
+		while (i + count < row.length && row[i + count] == row[i])
+			++count;
+		ret ~= Entry(i, count, row[i]);
+		i += count;
+	}
+	return ret;
+}
+
+/// Locates starting point of time scale
+/// Returns: [rowIndex, colIndex]
+size_t[2] locateScale(Entry[][] sheet){
+	throw new Exception("Not implemented");
+}*/
