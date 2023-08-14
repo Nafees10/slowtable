@@ -40,7 +40,7 @@ private:
 				i += count;
 				continue;
 			}
-			sectionClass[1] = sectionClass[1].courseNameClean;
+			sectionClass[1] = sectionClass[1].clean;
 			Class c = Class(day, TimeOfDay(8,0) + (colDur * i) + timeOffset,
 					colDur * count, sectionClass[1], sectionClass[0],venue);
 			ret ~= c;
