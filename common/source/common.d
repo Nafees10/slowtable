@@ -5,6 +5,7 @@ import std.json,
 			 std.format,
 			 std.algorithm,
 			 std.string,
+			 std.uni,
 			 std.conv : to;
 
 /// Stores information about a single class session
@@ -127,6 +128,30 @@ TimeOfDay[2] classesTimeMinMax(Class[] classes){
 /// Returns: true if clashes
 bool overlaps(Class a, Class b) pure {
 	return a.time < b.time + b.duration && b.time < a.time + a.duration;
+}
+
+/// Cleans up a name/section string
+/// Returns: cleaned up string
+string clean(string str) pure {
+	str = str.strip;
+	string ret;
+	bool white = false;
+	foreach (c; str){
+		if (c.isWhite || !c.isAlphaNum){
+			white = true;
+			continue;
+		}
+		if (white){
+			white = false;
+			ret ~= ' ';
+		}
+		ret ~= c.toLower;
+	}
+	return ret;
+}
+///
+unittest{
+	assert("  \tbla \t \n- bla-bla   \t  \n ".clean == "bla bla bla");
 }
 
 /// Separates section from course.
