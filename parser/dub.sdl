@@ -5,7 +5,12 @@ copyright "Copyright © 2023, nafees"
 license "MIT"
 dependency "argparse" version="~>1.3.0"
 dependency "utils" version="~>0.7.1"
-dependency "ods" version="~>0.0.2"
+// TODO uncomment this and update version when PR merged
+//dependency "ods" version="~>0.0.2"
+// TODO remove these after uncommenting above
+dependency "dxml" version="~>0.3.2"
+dependency "archive" version="~>0.6.0"
+// that todo stops applying below
 dependency "slowtable:common" path="../"
 targetPath "../bin"
 targetName "slowparser"
