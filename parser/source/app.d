@@ -15,15 +15,6 @@ struct Options{
 	@NamedArgument(["sheet-number", "s"])
 		uint sheetNumber = 0;
 
-	@NamedArgument(["interval", "i"])
-		uint interval = 10;
-
-	@NamedArgument(["positive-time-offset", "tp"])
-		int positiveTimeOffset = 0;
-
-	@NamedArgument(["negative-time-offset", "np"])
-		int negativeTimeOffset = 10;
-
 	@NamedArgument(["pretty-print", "p"])
 		bool prettyPrint = false;
 }
@@ -32,10 +23,8 @@ version (unittest) {} else
 	mixin CLI!Options.main!(run);
 
 void run(Options opts){
-	const int timeOffset = opts.positiveTimeOffset - opts.negativeTimeOffset;
 	Parser parser = Parser(opts.file, opts.sheetNumber);
-	parser.timeOffset = dur!"minutes"(timeOffset);
-	parser.colDur = dur!"minutes"(opts.interval);
+	parser.startTime = TimeOfDay(8, 0);
 
 	Class[] classes = parser.parse;
 	JSONValue[] jarr = new JSONValue[classes.length];

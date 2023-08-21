@@ -3,6 +3,7 @@ module parser;
 import std.algorithm,
 			 std.regex,
 			 std.string,
+			 std.conv,
 			 std.datetime;
 
 import ods;
@@ -16,6 +17,8 @@ struct Parser{
 private:
 	/// sheet
 	ODSSheet _sheet;
+	/// Time scale for measuring start/end times
+	TimeScale _scale;
 
 	/// parses a row
 	/// Returns: Class[], Classes found in that row
@@ -26,7 +29,8 @@ private:
 		if (tryReadDay(row[0], day) && day == DayOfWeek.sun)
 			throw new Exception("nop, just no");
 		string venue = row[1];
-		row = row[2 .. $];
+		enum Offset = 2;
+		row = row[Offset .. $];
 		for (uint i = 0; i < row.length;){
 			if (row[i] == ""){
 				i ++;
@@ -41,8 +45,10 @@ private:
 				continue;
 			}
 			sectionClass[1] = sectionClass[1].clean;
-			Class c = Class(day, TimeOfDay(8,0) + (colDur * i) + timeOffset,
-					colDur * count, sectionClass[1], sectionClass[0],venue);
+			Class c = Class(day,
+					_scale.at(Offset + i),
+					_scale.duration(Offset + i, count),
+					sectionClass[1], sectionClass[0], venue);
 			ret ~= c;
 			i += count;
 		}
@@ -51,10 +57,8 @@ private:
 	}
 
 public:
-	/// time offset  (added to class start time)
-	Duration timeOffset;
-	/// Duration per column
-	Duration colDur;
+	/// Starting time
+	TimeOfDay startTime;
 
 	/// constructor
 	this (string filename, uint sheet = 0){
@@ -69,6 +73,7 @@ public:
 	/// Parses the sheet for Class[]
 	Class[] parse(){
 		Class[] ret;
+		_scale = parseTimeScale(_sheet, startTime);
 		// find monday
 		string[] row;
 		while ((row.length < 2 || !tryReadDay(row[0])) && !_sheet.empty){
@@ -87,30 +92,10 @@ public:
 	}
 }
 
-/// Cleans up course name
-/// removes non-alphanumeric characters, minimizes spaces to maximum 1,
-/// lowercases
-/// Returns: clean name
-private string courseNameClean(string course){
-	string ret;
-	for (uint i = 0; i < course.length; i ++){
-		if (isAlphabet(course[i .. i + 1]) || isNum(course[i .. i + 1], false)){
-			ret ~= course[i] + (32 * (course[i] >= 'A' && course[i] <= 'Z'));
-			continue;
-		}
-		if (course[i] == ' '){
-			ret ~= ' ';
-			while (i + 1 < course.length && course[i + 1] == ' ')
-				i ++;
-		}
-	}
-	return ret.strip;
-}
-
 /// Finds DayOfWeek from sheet string
 /// Returns: DayOfWeek
 /// Throws: Exception if not found
-private DayOfWeek readDay(string str) pure {
+DayOfWeek readDay(string str) pure {
 	if (str.canFind("Monday"))
 		return DayOfWeek.mon;
 	if (str.canFind("Tuesday"))
@@ -129,7 +114,7 @@ private DayOfWeek readDay(string str) pure {
 }
 
 /// Returns: true if readDay was successful
-private bool tryReadDay(string str, ref DayOfWeek day){
+bool tryReadDay(string str, ref DayOfWeek day){
 	try{
 		day = readDay(str);
 		return true;
@@ -138,14 +123,14 @@ private bool tryReadDay(string str, ref DayOfWeek day){
 	}
 }
 /// ditto
-private bool tryReadDay(string str){
+bool tryReadDay(string str){
 	DayOfWeek dummy;
 	return tryReadDay(str, dummy);
 }
 
 /// counts how many times, consecutive, the first element occurs
 /// Returns: count, or 0 if array length 0
-private uint countConsecutive(T)(T[] array) pure {
+uint countConsecutive(T)(T[] array) pure {
 	uint ret;
 	foreach (elem; array){
 		if (elem == array[0])
@@ -156,51 +141,71 @@ private uint countConsecutive(T)(T[] array) pure {
 	return ret;
 }
 
-// new parser
-/*import std.algorithm,
-			 std.regex,
-			 std.string,
-			 std.datetime,
-			 std.conv,
-			 std.json;
-
-import ods;
-
-import utils.misc : isAlphabet, isNum;
-
-/// An entry in the sheet and its location
-struct Entry{
-	/// starting cell index
-	size_t index;
-	/// width
-	size_t width;
-	/// ending index (last index occupied by this)
-	@property size_t lastIndex() const pure {
-		return index + width - 1;
-	}
-	/// name
-	string name;
-}
-
 /// Time scale
 struct TimeScale{
+	TimeOfDay start; /// starting time
+	Duration[] add; /// how much to add at some index to get time covered
+	/// Time at some index
+	/// Returns: TimeOfDay at index
+	TimeOfDay at(size_t index) const pure {
+		TimeOfDay ret = start;
+		foreach (a; add[0 .. min(index - 1, cast(ptrdiff_t)add.length - 1)])
+			ret += a;
+		return ret;
+	}
 
+	/// Duration from start till start+count
+	/// Returns: Duration
+	Duration duration(size_t start, size_t count){
+		if (start >= add.length)
+			return dur!"minutes"(0);
+		uint ret;
+		foreach (m; add[start .. min(add.length, start + count)])
+			ret += m.total!"seconds";
+		return dur!"seconds"(ret);
+	}
 }
 
-Entry[] parseEntries(string[] row){
-	Entry[] ret;
-	for (size_t i = 0; i < row.length;){
-		size_t count = 1;
-		while (i + count < row.length && row[i + count] == row[i])
-			++count;
-		ret ~= Entry(i, count, row[i]);
-		i += count;
+/// Parses TimeScale from a ODSSheet
+/// Throws: Exception if TimeScale looks bad
+/// Returns: TimeScale
+TimeScale parseTimeScale(ODSSheet sheet, TimeOfDay start){
+	string[] mins;
+	size_t hOffset = size_t.max;
+	foreach (row; sheet){
+		if (!row.length || row[0].strip != "Periods")
+			continue;
+		// look for the 10 minute mark
+		foreach (i, cell; row){
+			if (cell.strip == "10"){
+				hOffset = i;
+				break;
+			}
+		}
+		if (row.length <= hOffset)
+			throw new Exception("That's one messed up looking TimeScale");
+		mins = row[hOffset .. $];
+		sheet.popFront;
+		break;
+	}
+
+	TimeScale ret;
+	ret.start = start;
+	ret.add.length = hOffset;
+	ret.add[] = dur!"minutes"(0);
+	uint prevMinutes = 0;
+	foreach (i, minStr; mins){
+		uint minutes;
+		try{
+			minutes = minStr.strip.to!uint;
+		}catch (ConvException){
+			continue;
+		}
+		ret.add ~= dur!"minutes"(
+				minutes > prevMinutes
+				? minutes - prevMinutes
+				: minutes);
+		prevMinutes = minutes;
 	}
 	return ret;
 }
-
-/// Locates starting point of time scale
-/// Returns: [rowIndex, colIndex]
-size_t[2] locateScale(Entry[][] sheet){
-	throw new Exception("Not implemented");
-}*/
