@@ -26,8 +26,8 @@ Run the following to clone and build:
 ```bash
 git clone https://github.com/Nafees10/slowtable
 cd slowtable
-dub build :slowparser -b=release
-dub build :slowfilter -b=release
+dub build :parser -b=release
+dub build :filter -b=release
 dub build :tablemaker -b=release
 ```
 
