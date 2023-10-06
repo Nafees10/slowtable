@@ -23,7 +23,12 @@ struct Filters{
 /// Attempts to match a section course combo to Filters
 ///
 /// Returns: true if matches, false if not
-bool matches(Filters filters, string section, string course){
+bool matches(Filters filters, Class c){
+	return matches(filters, c.section, c.name);
+}
+
+/// ditto
+private bool matches(Filters filters, string section, string course){
 	return
 		(
 		 matches(course, filters.coursesRel) ||
@@ -36,11 +41,6 @@ bool matches(Filters filters, string section, string course){
 		!matches([section, course], filters.coursesSectionNeg);
 }
 
-/// ditto
-bool matches(Filters filters, Class c){
-	return matches(filters, c.section, c.name);
-}
-
 /// Returns: true if a string matches in a list of patterns
 private bool matches(string str, string[] patterns){
 	foreach (pattern; patterns){
@@ -50,7 +50,8 @@ private bool matches(string str, string[] patterns){
 	return false;
 }
 /// ditto
-private bool matches(size_t count)(string[count] strs, string[count][] patterns){
+private bool matches(size_t count)(
+		string[count] strs, string[count][] patterns){
 	foreach (pattern; patterns){
 		bool match = true;
 		static foreach (i; 0 .. count)

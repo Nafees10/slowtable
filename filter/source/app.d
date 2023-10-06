@@ -1,6 +1,5 @@
 import std.stdio,
-			 std.json,
-			 std.algorithm;
+			 std.string;
 
 import argparse;
 
@@ -21,8 +20,6 @@ struct Options{
 		string[] coursesSection;
 	@NamedArgument(["negated-courses-section", "ncs"])
 		string[] coursesSectionNeg;
-	@NamedArgument(["pretty-print", "p"])
-		bool prettyPrint = false;
 }
 version (unittest) {} else
 	mixin CLI!Options.main!(run);
@@ -42,20 +39,15 @@ void run(Options opts){
 	filters.coursesSectionRel = separateSectionCourse(opts.coursesSection);
 	filters.coursesSectionNeg = separateSectionCourse(opts.coursesSectionNeg);
 
-	char[] input;
-	foreach (ubyte[] buf; chunks(stdin, 4096))
-		input ~= cast(char[])buf;
-	JSONValue[] timetables = parseJSON(input).get!(JSONValue[]);
-	foreach (i, classesJson; timetables){
-		JSONValue[] classes = classesJson.get!(JSONValue[]);
-		JSONValue[] filtered;
-		foreach (c; classes.filter!(a => matches(filters, Class(a))))
-			filtered ~= c;
-		timetables[i] = JSONValue(filtered);
+	while (!stdin.eof){
+		string line = readln.chomp("\n");
+		Class c;
+		try{
+			c = Class.deserialize(line);
+		} catch (Exception){
+			continue;
+		}
+		if (matches(filters, c))
+			writeln(line);
 	}
-
-	if (opts.prettyPrint)
-		writeln(JSONValue(timetables).toPrettyString);
-	else
-		writeln(JSONValue(timetables).toString);
 }
