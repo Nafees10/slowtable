@@ -29,6 +29,47 @@ struct Class{
 				name, section, venue, day, time, time + duration);
 	}
 
+	/// Serializes into a tab separated line
+	/// `name section venue day time duration(minutes)`
+	string serialize() const {
+		return format!"\t%s\t%s\t%s\t%s\t%s\t%d"(
+				name, section, venue, day, time.toISOString, duration.total!"minutes");
+	}
+
+	/// Deserialize from a tab separated line
+	/// Throws: Exception when invalid format
+	/// Returns: deserialized Class
+	static Class deserialize(string line){
+		string[] vals = line.split("\t");
+		if (vals.length && vals[0].length == 0)
+			vals = vals[1 .. $];
+		if (vals.length != 6)
+			throw new Exception("Invalid format");
+		Class ret;
+		try{
+			ret.name = vals[0];
+			ret.section = vals[1];
+			ret.venue = vals[2];
+			ret.day = vals[3].to!DayOfWeek;
+			ret.time = TimeOfDay.fromISOString(vals[4]);
+			ret.duration = dur!"minutes"(vals[5].to!uint);
+		} catch (Exception){
+			throw new Exception("Invalid format");
+		}
+		return ret;
+	}
+
+	/// Returns: whether this equals another Class
+	/*bool opEquals(ref Class rhs) const pure {
+		return
+			this.name == rhs.name &&
+			this.section == rhs.section &&
+			this.venue == rhs.venue &&
+			this.day == rhs.day &&
+			this.time == rhs.time &&
+			this.duration == rhs.duration;
+	}*/
+
 	/// encode's time for comparison, for a Class
 	///
 	/// Returns: encoded time
@@ -89,7 +130,15 @@ unittest{
 	JSONValue json = c.jsonOf;
 	Class d = Class(json);
 	assert (d.day == c.day);
-	assert (d.time == c.time, d.time.toISOExtString ~ " != " ~ c.time.toISOExtString);
+	assert (d.time == c.time);
+	assert (d.duration == c.duration);
+	assert (d.name == c.name);
+	assert (d.section == c.section);
+	assert (d.venue == c.venue);
+
+	d = Class.deserialize(c.serialize);
+	assert (d.day == c.day);
+	assert (d.time == c.time);
 	assert (d.duration == c.duration);
 	assert (d.name == c.name);
 	assert (d.section == c.section);
