@@ -5,7 +5,7 @@ FAST NUCES Lahore.
 ## Features
 
 1. Simple UNIX philosophy following tools
-1. JSON for communication
+1. Simple serialized format, human readable
 1. Regex based filtering
 1. Advanced filtering tool
 1. Colored output (per section)
@@ -42,32 +42,27 @@ Run any of these tools with the `--help` flag to show help.
 ## `slowparser`
 
 Reads a FAST NUCES Lahore's timetable file (timetable must be first sheet), and
-outputs an array of array of JSON objects describing each class:
+outputs a serialized list of Classes, tab separated values, with a tab at start:
 
-```json
-[
-	[
-		...,
-		{
-			"day": "mon",
-			"duration": 80,
-			"name": "data structures",
-			"section": "BDS-3B",
-			"time": "08:30:00",
-			"venue": "Seminar Hall"
-		},
-		...
-	]
-]
+```
+	courseName courseSection venue day timeISOString durationMinutes
 ```
 
-The outermost array is an array of timetables, where each timetable is an array
-of objects.
+for example:
+
+```
+	operations research	BSE-5C	E&M-2	mon	143000	80
+	operations research	BSE-5B	CE-1	mon	113000	80
+	operations research	BSE-5A	CS-1	mon	100000	80
+	operations research	BSE-5C	E&M-2	wed	143000	80
+	operations research	BSE-5A	CS-1	wed	100000	80
+	operations research	BSE-5B	CS-5	fri	113000	80
+```
 
 ## `slowfilter`
 
-Reads array of JSON objects for classes, and runs them through a set of filters,
-outputting objects in same structure, which pass the filter.
+Reads list of classes, and runs them through a set of filters, outputting
+objects in same structure, which pass the filter.
 
 ### Filtering
 
@@ -139,7 +134,7 @@ slowfilter -s BSE-4 -ncs 'Software Design (BSE-4B)'
 
 ## `tablemaker`
 
-Takes input array of timetables, and outputs html rendering for them.
+Takes input list of classes, and outputs html rendering for them.
 
 ---
 
@@ -151,13 +146,13 @@ libreoffice --headless --convert-to ods path/to/timetable.xlsx
 
 Then use `slowparser` to extract JSON information from it:
 ```bash
-slowparser timetable.ods > timetable.json
+slowparser timetable.ods > timetable
 ```
 
 From there onwards, slowtable tools can be used with the JSON data:
 ```bash
-cat timetable.json | slowfilter -s BSE-5 > bse5-timetable.json
-cat bse5-timetable.json | tablemaker > bse5-timetable.html
+cat timetable | slowfilter -s BSE-5 > bse5-timetable
+cat bse5-timetable | tablemaker > bse5-timetable.html
 ```
 
 The generated HTML file can be opened by a web browser.
