@@ -12,6 +12,8 @@ import utils.misc : isAlphabet, isNum;
 
 import common;
 
+private enum Offset = 2;
+
 /// Parser for timetable
 struct Parser{
 private:
@@ -19,76 +21,88 @@ private:
 	ODSSheet _sheet;
 	/// Time scale for measuring start/end times
 	TimeScale _scale;
+	/// current row
+	string[] _row = null;
+	/// index in current row
+	size_t _rowInd = 0;
+	/// Current day
+	DayOfWeek _day;
 
-	/// parses a row
-	/// Returns: Class[], Classes found in that row
-	Class[] _parseRow(string[] row, ref DayOfWeek day){
-		Class[] ret;
-		if (row.length < 2)
-			return ret;
-		if (tryReadDay(row[0], day) && day == DayOfWeek.sun)
-			throw new Exception("nop, just no");
-		string venue = row[1];
-		enum Offset = 2;
-		row = row[Offset .. $];
-		for (uint i = 0; i < row.length;){
-			if (row[i] == ""){
-				i ++;
-				continue;
+	/// parses next class in row
+	Class _parseClass(){
+		if (_rowInd == 0){
+			if (_row.length <= 2){
+				_row = null;
+				return Class.init;
 			}
-			const uint count = countConsecutive(row[i .. $]);
-			if (!count)
-				break;
-			string[2] sectionClass = separateSectionCourse(row[i]);
-			if (!sectionClass[1].length){
-				i += count;
-				continue;
-			}
-			sectionClass[1] = sectionClass[1].clean;
-			Class c = Class(day,
-					_scale.at(Offset + i),
-					_scale.duration(Offset + i, count),
-					sectionClass[1], sectionClass[0], venue);
-			ret ~= c;
-			i += count;
+			tryReadDay(_row[0], _day);
+			_rowInd = 2;
 		}
-		ret.classesSortByTime;
+		// skip spaces
+		while (_rowInd < _row.length && _row[_rowInd] == "")
+			++ _rowInd;
+		if (_rowInd >= _row.length){
+			_row = null;
+			return Class.init;
+		}
+
+		const uint count = countConsecutive(_row[_rowInd .. $]);
+		if (!count){
+			_row = null;
+			return Class.init;
+		}
+		string[2] secClass = separateSectionCourse(_row[_rowInd]);
+		Class ret = Class(_day,
+				_scale.at(_rowInd),
+				_scale.duration(_rowInd, count),
+				secClass[1].clean, secClass[0], _row[1]
+				);
+		_rowInd += count;
 		return ret;
 	}
 
 public:
-	/// Starting time
-	TimeOfDay startTime;
+	Class front;
 
 	/// constructor
-	this (string filename, uint sheet = 0){
+	this (string filename, uint sheet = 0, TimeOfDay startTime){
 		_sheet = new ODSSheet();
 		_sheet.repeatMergedCells = true;
 		_sheet.readSheet(filename, sheet);
+		_scale = parseTimeScale(_sheet, startTime);
+		// find monday
+		_row = _sheet.front;
+		while ((_row.length < 2 || !tryReadDay(_row[0], _day)) && !_sheet.empty){
+			_sheet.popFront;
+			_row = _sheet.front;
+		}
+		_rowInd = 0;
+		popFront();
 	}
 	~this(){
 		.destroy(_sheet);
 	}
 
-	/// Parses the sheet for Class[]
-	Class[] parse(){
-		Class[] ret;
-		_scale = parseTimeScale(_sheet, startTime);
-		// find monday
-		string[] row;
-		while ((row.length < 2 || !tryReadDay(row[0])) && !_sheet.empty){
-			row = _sheet.front;
-			_sheet.popFront;
+	bool empty(){
+		return _row == null && _sheet.empty;
+	}
+
+	void popFront(){
+		while (true){
+			if (_row == null){
+				if (_sheet.empty)
+					return;
+				_sheet.popFront;
+				_row = _sheet.front;
+				_rowInd = 0;
+			}
+			front = _parseClass();
+			if (_row == null)
+				continue;
+			if (_rowInd >= _row.length)
+				_row = null;
+			break;
 		}
-		DayOfWeek day;
-		if (row.length < 2 || !tryReadDay(row[0], day))
-			return ret;
-		do{
-			ret ~= _parseRow(row, day);
-			row = _sheet.front;
-			_sheet.popFront;
-		} while (!_sheet.empty);
-		return ret;
 	}
 }
 

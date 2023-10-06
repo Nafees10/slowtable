@@ -1,6 +1,7 @@
 import std.stdio,
 			 std.json,
 			 std.datetime;
+import core.stdc.stdlib;
 
 import parser,
 			 common;
@@ -14,26 +15,17 @@ struct Options{
 
 	@NamedArgument(["sheet-number", "s"])
 		uint sheetNumber = 0;
-
-	@NamedArgument(["pretty-print", "p"])
-		bool prettyPrint = false;
 }
 
 version (unittest) {} else
 	mixin CLI!Options.main!(run);
 
 void run(Options opts){
-	Parser parser = Parser(opts.file, opts.sheetNumber);
-	parser.startTime = TimeOfDay(8, 0);
-
-	Class[] classes = parser.parse;
-	JSONValue[] jarr = new JSONValue[classes.length];
-	foreach (i, c; classes)
-		jarr[i] = c.jsonOf;
-	JSONValue timetables = JSONValue([jarr]);
-
-	if (opts.prettyPrint)
-		writeln(timetables.toPrettyString);
-	else
-		writeln(timetables.toString);
+	try{
+		foreach (Class c; Parser(opts.file, opts.sheetNumber, TimeOfDay(8, 0)))
+			writeln(c.serialize);
+	} catch (Exception e){
+		stderr.writeln(e.msg);
+		exit(1);
+	}
 }
