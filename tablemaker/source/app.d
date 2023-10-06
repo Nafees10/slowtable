@@ -1,5 +1,5 @@
 import std.stdio,
-			 std.json,
+			 std.string,
 			 std.conv : to;
 
 import common,
@@ -15,17 +15,18 @@ void main(string[] args){
 					interval.to!string);
 		}
 	}
-	char[] input;
-	foreach (ubyte[] buf; chunks(stdin, 4096))
-		input ~= cast(char[])buf;
 
-	JSONValue[] timetables = parseJSON(input).get!(JSONValue[]);
-	writeln(HTML_STYLE);
-	foreach (classesJson; timetables){
-		JSONValue[] classesJarr = classesJson.get!(JSONValue[]);
-		Class[] classes = new Class[classesJarr.length];
-		foreach (i, classJson; classesJarr)
-			classes[i] = Class(classJson);
-		writeln(generateTable(classes, interval));
+	Class[] classes;
+	while (!stdin.eof){
+		string line = readln.chomp("\n");
+		Class c;
+		try{
+			c = Class.deserialize(line);
+		} catch (Exception){
+			continue;
+		}
+		classes ~= c;
 	}
+	writeln(HTML_STYLE);
+	writeln(generateTable(classes, interval));
 }
