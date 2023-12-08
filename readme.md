@@ -144,12 +144,12 @@ First to convert an xlsx timetable file to ods, run the following:
 libreoffice --headless --convert-to ods path/to/timetable.xlsx
 ```
 
-Then use `slowparser` to extract JSON information from it:
+Then use `slowparser` to extract timetable information from it:
 ```bash
 slowparser timetable.ods > timetable
 ```
 
-From there onwards, slowtable tools can be used with the JSON data:
+From there onwards, slowtable tools can be used with the timetable data:
 ```bash
 cat timetable | slowfilter -s BSE-5 > bse5-timetable
 cat bse5-timetable | tablemaker > bse5-timetable.html
