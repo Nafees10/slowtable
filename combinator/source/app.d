@@ -1,7 +1,18 @@
-import std.stdio;
+import std.stdio,
+			 std.string;
 
 import common;
 
 void main(){
-	writeln("Edit source/app.d to start your project.");
+	Class[] classes;
+	while (!stdin.eof){
+		string line = readln.chomp("\n");
+		Class c;
+		try {
+			c = Class.deserialize(line);
+		} catch (Exception){
+			continue;
+		}
+		classes ~= c;
+	}
 }
