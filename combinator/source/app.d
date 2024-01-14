@@ -34,17 +34,9 @@ struct Set(T){
 
 /// Stores overlap info about classes
 struct ClashMap{
-	Set!string[string] set;
-	pragma(inline, true) void add(
-			string aName, string aSec, string bName, string bSec){
-		set[aName ~ '-' ~ aSec].add(bName ~ '-' ~ bSec);
-	}
-	pragma(inline, true) bool clashes(
-			string aName, string aSec, string bName, string bSec){
-		return set[aName ~ '-' ~ aSec].exists(bName ~ '-' ~ bSec) ||
-			set[bName ~ '-' ~ bSec].exists(aName ~ '-' ~ aSec);
-	}
+	Set!string[string] sets;
 
+	/// constructor
 	this(Class[] classes){
 		foreach (i, a; classes){
 			foreach (b; classes[i + 1 .. $]){
@@ -54,12 +46,23 @@ struct ClashMap{
 		}
 	}
 
+	/// Add a clashing pair of classes
+	void add(string aName, string aSec, string bName, string bSec){
+		sets[aName ~ '-' ~ aSec].add(bName ~ '-' ~ bSec);
+	}
+
+	/// Returns: whether a pair of classes clash
+	bool clashes(string aName, string aSec, string bName, string bSec){
+		return sets[aName ~ '-' ~ aSec].exists(bName ~ '-' ~ bSec) ||
+			sets[bName ~ '-' ~ bSec].exists(aName ~ '-' ~ aSec);
+	}
+
 	/// Returns: whether a course will clash with other picked courses
 	bool clashes(Set!string picks, string name, string sec){
 		immutable string cmp = name ~ '-' ~ sec;
-		if (cmp !in set)
+		if (cmp !in sets)
 			return false;
-		Set!string clashSet = set[cmp];
+		Set!string clashSet = sets[cmp];
 		foreach (key; clashSet.keys){
 			if (picks.exists(key))
 				return true;
