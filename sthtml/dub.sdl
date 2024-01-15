@@ -1,5 +1,5 @@
-name "tablemaker"
-description "slowtable tablemaker"
+name "sthtml"
+description "slowtable html tablemaker"
 authors "nafees"
 copyright "Copyright © 2023-2024, nafees"
 license "MIT"

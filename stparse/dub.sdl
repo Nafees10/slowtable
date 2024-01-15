@@ -1,4 +1,4 @@
-name "parser"
+name "stparse"
 description "slowtable parser"
 authors "nafees"
 copyright "Copyright © 2023-2024, nafees"

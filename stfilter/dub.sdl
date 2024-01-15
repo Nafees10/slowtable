@@ -1,4 +1,4 @@
-name "filter"
+name "stfilter"
 description "slowtable filter"
 authors "nafees"
 copyright "Copyright © 2023-2024, nafees"
