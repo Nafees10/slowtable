@@ -34,6 +34,9 @@ dub build :stcomb -b=release # combinator to generate timetable combinations
 
 This will create executables in the `bin` folder.
 
+Run the `./link.sh` script to create symlinks in `~/.local/bin/`, making the
+binaries runnable without needing to `cd` into `slowtable/bin/`.
+
 ---
 
 ## Tools
@@ -47,7 +50,7 @@ outputs a serialized list of Classes, tab separated values, with a tab at start:
 
 ```
 TimetableName
-	courseName courseSection venue day timeISOString durationMinutes
+	courseName	courseSection	venue	day	timeISOString	durationMinutes
 	...
 over
 ```
@@ -87,37 +90,47 @@ to be `.*` so it includes all courses of all sections. So any negating filters
 can be used without the `-s`, `-c`, or `-cs` filters.
 
 #### `-s section`
-Use the `-s` flag to filter for sections.  
+
+Use the `-s` flag to filter for sections.
+
 For example, to only include courses for all sections of `BSE-4`, run the
 following:
+
 ```bash
-./stparse input.ods | ./stfilter -s BSE-4
+stparse input.ods | stfilter -s BSE-4
 ```
 
 To only include courses for `BSE-4A` and `BCS-4A`, run the following:
+
 ```bash
 stfilter -s BSE-4A BCS-4A
 ```
 
 #### `-ns section`
+
 Use the `-ns` flag to filter _out_ a section.
 For example, to exclude all Masters courses, while keeping all BS courses:
+
 ```
 stfilter -ns 'M\S\S-'
 ```
+
 this uses the regex filter `M\S\S` to match any section that begins with M
 followed by 2 alphabets followed by a `-`.
 
 #### `-c course`
+
 Use the `-c` flag to filter for courses, i.e: include _all_ sections of a
 specific course.
 For example, to include all sections of Object Oriented Programming, run the
 following:
+
 ```bash
 stfilter -c 'Object Oriented Programming'
 ```
 
 #### `-nc course`
+
 Use the `-nc` flag to filter _out_ a course.
 For example, to include all courses of BSE-4, except for `Data Structures`:
 ```bash
@@ -125,6 +138,7 @@ stfilter -s BSE-4 -nc 'Data Structures'
 ```
 
 #### `-cs course (section)`
+
 Use the `-cs` flag to include a specific course of a specific section.
 For example, to include all `BSE-4A` courses, along with
 `Database Systems (BSE-4B)`:
@@ -133,6 +147,7 @@ stfilter -s BSE-4A -cs 'Database (BSE-4B)'
 ```
 
 #### `-ncs course (section)`
+
 Use the `-cs` flag to exclude a specific course of a specific section.
 For example, to include all `BSE-4` courses, except for
 `Software Design .. (BSE-4B)`:
@@ -142,38 +157,56 @@ stfilter -s BSE-4 -ncs 'Software Design (BSE-4B)'
 
 ## `sthtml`
 
-Takes input list of classes, and outputs html rendering for them.
+Takes input (stdin) timetable(s), and outputs HTML for each.
+
+Example:
+
+```bash
+cat BSE-5 | sthtml > BSE-5.html
+```
 
 ## `stcomb`
 
-Takes input timetables, and outputs all possible combinations, sorted according
-to ratings. The ratings are based on:
+Takes input timetables, and outputs all possible non-clashing combinations,
+sorted according to ratings. The ratings are based on:
 
 * Inter-day consistency
 * Number of days
 * Gaps between classes
 
+Weights to each of these ratings can be provided. See `stcomb --help`.
+
+Example:
+
+```bash
+cat BSE-5 | stcomb | sthtml > BSE-5-all.html
+```
+
 ---
 
 ## Usage
+
 First to convert an xlsx timetable file to ods, run the following:
+
 ```bash
 libreoffice --headless --convert-to ods path/to/timetable.xlsx
 ```
 
 Then use `stparse` to extract timetable information from it:
+
 ```bash
 stparse timetable.ods > timetable
 ```
 
 From there onwards, slowtable tools can be used with the timetable data:
+
 ```bash
 cat timetable | stfilter -s BSE-5 > bse5-timetable
 cat bse5-timetable | sthtml > bse5-timetable.html
 cat bse5-timetable | stcomb | sthtml > bse5-timetables-all.html
 ```
 
-The generated HTML file can be opened by a web browser.
+The generated HTML files can be opened by a web browser.
 
 ---
 
