@@ -27,35 +27,41 @@ void main(string[] args){
 		}
 	}
 
-	Class[] classes;
-	string[string] nameSec;
 	while (!stdin.eof){
 		string line = readln.chomp("\n");
-		Class c;
-		try {
-			c = Class.deserialize(line);
-		} catch (Exception) {
-			continue;
+		if (line.length == 0) continue;
+		immutable string name = line;
+		Class[] classes;
+		string[string] nameSec;
+
+		while (!stdin.eof){
+			line = readln.chomp("\n");
+			if (line == "over")
+				break;
+			Class c;
+			try {
+				c = Class.deserialize(line);
+			} catch (Exception) {
+				continue;
+			}
+			classes ~= c;
+			if (c.name in nameSec ||
+					nameSec[c.name].canFind(c.section))
+				continue;
+			nameSec[c.name] ~= c.section;
 		}
-		classes ~= c;
-		if (c.name in nameSec ||
-				nameSec[c.name].canFind(c.section))
-			continue;
-		nameSec[c.name] ~= c.section;
-	}
 
-	Class[][] combinations = genComb(classes, nameSec);
-	uint[] ratings = combinations.map!(a =>
-			rate(a, weights[0], weights[1], weights[1])
-			).array;
-	sortByRatings(combinations, ratings);
-
-	// print em out
-	foreach (i, tt; combinations){
-		writefln!"Rating: %d"(ratings[i]);
-		foreach (session; tt)
-			writeln(session.serialize);
-		writeln("over");
+		Class[][] combinations = genComb(classes, nameSec);
+		uint[] ratings = combinations.map!(a =>
+				rate(a, weights[0], weights[1], weights[1])
+				).array;
+		sortByRatings(combinations, ratings);
+		foreach (i, tt; combinations){
+			writefln!"%s Combination %d Rating: %d"(name, i, ratings[i]);
+			foreach (session; tt)
+				writeln(session.serialize);
+			writeln("over");
+		}
 	}
 }
 

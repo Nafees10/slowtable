@@ -16,17 +16,26 @@ void main(string[] args){
 		}
 	}
 
-	Class[] classes;
 	while (!stdin.eof){
 		string line = readln.chomp("\n");
-		Class c;
-		try{
-			c = Class.deserialize(line);
-		} catch (Exception){
-			continue;
+		if (line.length == 0) continue;
+		writeln(HTML_STYLE);
+		writefln!"<h1>%s:</h1>"(line); // print name back
+
+		Class[] classes;
+		while (!stdin.eof){
+			line = readln.chomp("\n");
+			if (line == "over")
+				break;
+			Class c;
+			try{
+				c = Class.deserialize(line);
+			} catch (Exception){
+				continue;
+			}
+			classes ~= c;
 		}
-		classes ~= c;
+		writeln(generateTable(classes, interval));
+		writeln("<hr>");
 	}
-	writeln(HTML_STYLE);
-	writeln(generateTable(classes, interval));
 }

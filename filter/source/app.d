@@ -70,13 +70,22 @@ void main(string[] args){
 
 	while (!stdin.eof){
 		string line = readln.chomp("\n");
-		Class c;
-		try{
-			c = Class.deserialize(line);
-		} catch (Exception){
-			continue;
+		if (line.length == 0) continue;
+		writeln(line); // print name back
+
+		while (!stdin.eof){
+			line = readln.chomp("\n");
+			if (line == "over")
+				break;
+			Class c;
+			try{
+				c = Class.deserialize(line);
+			} catch (Exception){
+				continue;
+			}
+			if (matches(filters, c))
+				writeln(line);
 		}
-		if (matches(filters, c))
-			writeln(line);
+		writeln("over");
 	}
 }

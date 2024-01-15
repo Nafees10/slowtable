@@ -1,4 +1,5 @@
 import std.stdio,
+			 std.path,
 			 std.datetime,
 			 std.conv : to;
 import core.stdc.stdlib;
@@ -21,6 +22,7 @@ void main(string[] args){
 			exit(1);
 		}
 	}
+	writefln!"%s[%d]"(filename.baseName, sheetNumber);
 	try{
 		foreach (Class c; Parser(filename, sheetNumber, TimeOfDay(8, 0)))
 			writeln(c.serialize);
@@ -28,5 +30,6 @@ void main(string[] args){
 		stderr.writeln(e.msg);
 		exit(1);
 	}
+	writeln("over");
 
 }
