@@ -15,11 +15,11 @@ void main(string[] args){
 					interval.to!string);
 		}
 	}
+	writeln(HTML_STYLE);
 
 	while (!stdin.eof){
 		string line = readln.chomp("\n");
 		if (line.length == 0) continue;
-		writeln(HTML_STYLE);
 		writefln!"<h1>%s:</h1>"(line); // print name back
 
 		Class[] classes;
