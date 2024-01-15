@@ -10,7 +10,7 @@ void main(string[] args){
 	string filename;
 	uint sheetNumber;
 	if (args.length < 2){
-		stderr.writeln("Usage:\n\tslowparser timetable.ods [sheetIndex]");
+		stderr.writefln!"Usage:\n\t%s timetable.ods [sheetIndex]"(args[0]);
 		exit(1);
 	}
 	filename = args[1];
