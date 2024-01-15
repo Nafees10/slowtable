@@ -162,8 +162,8 @@ struct ClashMap{
 
 	/// Returns: whether a pair of classes clash
 	bool clashes(string aName, string aSec, string bName, string bSec){
-		return sets[aName ~ '-' ~ aSec].exists(bName ~ '-' ~ bSec) ||
-			sets[bName ~ '-' ~ bSec].exists(aName ~ '-' ~ aSec);
+		immutable a = aName ~ '-' ~ aSec, b =  bName ~ '-' ~ bSec;
+		return (a in sets && sets[a].exists(b)) || (b in sets && sets[b].exists(a));
 	}
 
 	/// Returns: whether a course will clash with other picked courses
