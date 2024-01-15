@@ -48,7 +48,7 @@ uint rateGaps(Class[][DayOfWeek] classes){
 		if (sessions.length == 0)
 			continue;
 		foreach (i, curr; sessions[1 .. $]){
-			Class prev = sessions[i - 1];
+			Class prev = sessions[i];
 			gaps += (curr.time - (prev.time + prev.duration)).total!"minutes";
 		}
 	}

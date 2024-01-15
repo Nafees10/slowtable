@@ -32,7 +32,7 @@ void main(string[] args){
 		if (line.length == 0) continue;
 		immutable string name = line;
 		Class[] classes;
-		string[string] nameSec;
+		string[][string] nameSec;
 
 		while (!stdin.eof){
 			line = readln.chomp("\n");
@@ -45,7 +45,7 @@ void main(string[] args){
 				continue;
 			}
 			classes ~= c;
-			if (c.name in nameSec ||
+			if (c.name in nameSec &&
 					nameSec[c.name].canFind(c.section))
 				continue;
 			nameSec[c.name] ~= c.section;
@@ -86,7 +86,7 @@ void sortByRatings(Class[][] timetables, uint[] ratings){
 }
 
 /// Generate all combinations.
-Class[][] genComb(Class[] classes, string[string] nameSec){
+Class[][] genComb(Class[] classes, string[][string] nameSec){
 	ClashMap clashes = ClashMap(classes);
 	if (nameSec.length > COURSES_LIMIT)
 		throw new Exception(
@@ -97,7 +97,7 @@ Class[][] genComb(Class[] classes, string[string] nameSec){
 	return null;
 }
 
-Class[][] genComb(Class[] classes, string[string] nameSec,
+Class[][] genComb(Class[] classes, string[][string] nameSec,
 		ClashMap clashes, uint index){
 	static Set!string picks;
 	immutable bool isLeaf = index + 1 == nameSec.keys.length;
@@ -108,10 +108,11 @@ Class[][] genComb(Class[] classes, string[string] nameSec,
 		if (clashes.clashes(picks, selection))
 			continue;
 		picks.add(selection);
-		if (isLeaf)
+		if (isLeaf) {
 			ret ~= subset(classes, picks);
-		else
+		} else {
 			ret ~= genComb(classes, nameSec, clashes, index + 1);
+		}
 		picks.remove(selection);
 	}
 	return ret;
@@ -153,6 +154,9 @@ struct ClashMap{
 
 	/// Add a clashing pair of classes
 	void add(string aName, string aSec, string bName, string bSec){
+		immutable string key = aName ~ '-' ~ aSec;
+		if (key !in sets)
+			sets[key] = Set!string.init;
 		sets[aName ~ '-' ~ aSec].add(bName ~ '-' ~ bSec);
 	}
 
