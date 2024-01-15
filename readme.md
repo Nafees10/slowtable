@@ -26,9 +26,10 @@ Run the following to clone and build:
 ```bash
 git clone https://github.com/Nafees10/slowtable
 cd slowtable
-dub build :parser -b=release
-dub build :filter -b=release
-dub build :tablemaker -b=release
+dub build :stparse -b=release # for the slowtable ODS parser
+dub build :stfilter -b=release # slowtable timetable filter
+dub build :sthtml -b=release # slowtable timetable to html for graphical view
+dub build :stcomb -b=release # combinator to generate timetable combinations
 ```
 
 This will create executables in the `bin` folder.
@@ -39,27 +40,34 @@ This will create executables in the `bin` folder.
 
 Run any of these tools with the `--help` flag to show help.
 
-## `slowparser`
+## `stparse`
 
 Reads a FAST NUCES Lahore's timetable file (timetable must be first sheet), and
 outputs a serialized list of Classes, tab separated values, with a tab at start:
 
 ```
+TimetableName
 	courseName courseSection venue day timeISOString durationMinutes
+	...
+over
 ```
 
 for example:
 
 ```
+Fall2023.ods[0]
+	...
 	operations research	BSE-5C	E&M-2	mon	143000	80
 	operations research	BSE-5B	CE-1	mon	113000	80
 	operations research	BSE-5A	CS-1	mon	100000	80
 	operations research	BSE-5C	E&M-2	wed	143000	80
 	operations research	BSE-5A	CS-1	wed	100000	80
 	operations research	BSE-5B	CS-5	fri	113000	80
+	...
+over
 ```
 
-## `slowfilter`
+## `stfilter`
 
 Reads list of classes, and runs them through a set of filters, outputting
 objects in same structure, which pass the filter.
@@ -83,19 +91,19 @@ Use the `-s` flag to filter for sections.
 For example, to only include courses for all sections of `BSE-4`, run the
 following:
 ```bash
-./slowfilter input.ods -s BSE-4
+./stparse input.ods | ./stfilter -s BSE-4
 ```
 
 To only include courses for `BSE-4A` and `BCS-4A`, run the following:
 ```bash
-slowfilter -s BSE-4A BCS-4A
+stfilter -s BSE-4A BCS-4A
 ```
 
 #### `-ns section`
 Use the `-ns` flag to filter _out_ a section.
 For example, to exclude all Masters courses, while keeping all BS courses:
 ```
-slowfilter -ns 'M\S\S-'
+stfilter -ns 'M\S\S-'
 ```
 this uses the regex filter `M\S\S` to match any section that begins with M
 followed by 2 alphabets followed by a `-`.
@@ -106,14 +114,14 @@ specific course.
 For example, to include all sections of Object Oriented Programming, run the
 following:
 ```bash
-slowfilter -c 'Object Oriented Programming'
+stfilter -c 'Object Oriented Programming'
 ```
 
 #### `-nc course`
 Use the `-nc` flag to filter _out_ a course.
 For example, to include all courses of BSE-4, except for `Data Structures`:
 ```bash
-slowfilter -s BSE-4 -nc 'Data Structures'
+stfilter -s BSE-4 -nc 'Data Structures'
 ```
 
 #### `-cs course (section)`
@@ -121,7 +129,7 @@ Use the `-cs` flag to include a specific course of a specific section.
 For example, to include all `BSE-4A` courses, along with
 `Database Systems (BSE-4B)`:
 ```bash
-slowfilter -s BSE-4A -cs 'Database (BSE-4B)'
+stfilter -s BSE-4A -cs 'Database (BSE-4B)'
 ```
 
 #### `-ncs course (section)`
@@ -129,12 +137,21 @@ Use the `-cs` flag to exclude a specific course of a specific section.
 For example, to include all `BSE-4` courses, except for
 `Software Design .. (BSE-4B)`:
 ```bash
-slowfilter -s BSE-4 -ncs 'Software Design (BSE-4B)'
+stfilter -s BSE-4 -ncs 'Software Design (BSE-4B)'
 ```
 
-## `tablemaker`
+## `sthtml`
 
 Takes input list of classes, and outputs html rendering for them.
+
+## `stcomb`
+
+Takes input timetables, and outputs all possible combinations, sorted according
+to ratings. The ratings are based on:
+
+* Inter-day consistency
+* Number of days
+* Gaps between classes
 
 ---
 
@@ -144,15 +161,16 @@ First to convert an xlsx timetable file to ods, run the following:
 libreoffice --headless --convert-to ods path/to/timetable.xlsx
 ```
 
-Then use `slowparser` to extract timetable information from it:
+Then use `stparse` to extract timetable information from it:
 ```bash
-slowparser timetable.ods > timetable
+stparse timetable.ods > timetable
 ```
 
 From there onwards, slowtable tools can be used with the timetable data:
 ```bash
-cat timetable | slowfilter -s BSE-5 > bse5-timetable
-cat bse5-timetable | tablemaker > bse5-timetable.html
+cat timetable | stfilter -s BSE-5 > bse5-timetable
+cat bse5-timetable | sthtml > bse5-timetable.html
+cat bse5-timetable | stcomb | sthtml > bse5-timetables-all.html
 ```
 
 The generated HTML file can be opened by a web browser.
@@ -160,4 +178,5 @@ The generated HTML file can be opened by a web browser.
 ---
 
 ## Acknowledgments
-This program uses TransientResponse's [`dlang-ods`](https://github.com/TransientResponse/dlang-ods) library.
+This program uses TransientResponse's
+[`dlang-ods`](https://github.com/TransientResponse/dlang-ods) library.
