@@ -1,14 +1,32 @@
 import std.stdio,
+			 std.conv,
 			 std.array,
 			 std.string,
 			 std.algorithm;
 
-import common;
+import core.stdc.stdlib;
+
+import common,
+			 rater;
 
 /// maximum number of courses this will let you generate combinations for
 enum COURSES_LIMIT = 15; // what insane person wants this much?
 
-void main(){
+void main(string[] args){
+	if (args.canFind("-h") || args.canFind("--help")){
+		writeln("Usage:\n\t", args[0], " consistencyWeight daysWeight gapsWeight");
+		writeln("Weights are all integer, and by default, 1");
+		exit(1);
+	}
+	uint[3] weights = 1;
+	foreach (i, arg; args[1 .. $]){
+		try{
+			weights[i] = arg.to!uint;
+		} catch (Exception e){
+			stderr.writefln!"`%s` is not a valid weight"(arg);
+		}
+	}
+
 	Class[] classes;
 	string[string] nameSec;
 	while (!stdin.eof){
@@ -24,6 +42,40 @@ void main(){
 				nameSec[c.name].canFind(c.section))
 			continue;
 		nameSec[c.name] ~= c.section;
+	}
+
+	Class[][] combinations = genComb(classes, nameSec);
+	uint[] ratings = combinations.map!(a =>
+			rate(a, weights[0], weights[1], weights[1])
+			).array;
+	sortByRatings(combinations, ratings);
+
+	// print em out
+	foreach (i, tt; combinations){
+		writefln!"Rating: %d"(ratings[i]);
+		foreach (session; tt)
+			writeln(session.serialize);
+		writeln("over");
+	}
+}
+
+/// Sorts timetables by ratings
+void sortByRatings(Class[][] timetables, uint[] ratings){
+	// good ol' bubble sort
+	bool sorted = false;
+	while (!sorted){
+		sorted = true;
+		for (int i = 1; i < ratings.length; i ++){
+			if (ratings[i - 1] <= ratings[i])
+				continue;
+			sorted = false;
+			Class[] tt = timetables[i - 1];
+			uint r = ratings[i - 1];
+			timetables[i - 1] = timetables[i];
+			timetables[i] = tt;
+			ratings[i - 1] = ratings[i];
+			ratings[i] = r;
+		}
 	}
 }
 
