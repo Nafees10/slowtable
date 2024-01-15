@@ -1,7 +1,7 @@
 name "slowtable"
 description "timetable tools"
 authors "Nafees Hassan"
-copyright "Copyright © 2023, Nafees Hassan"
+copyright "Copyright © 2023-2024, Nafees Hassan"
 license "MIT"
 targetType "none"
 subPackage "./common"

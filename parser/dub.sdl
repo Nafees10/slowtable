@@ -1,7 +1,7 @@
 name "parser"
 description "slowtable parser"
 authors "nafees"
-copyright "Copyright © 2023, nafees"
+copyright "Copyright © 2023-2024, nafees"
 license "MIT"
 dependency "utils" version="~>0.7.1"
 // TODO uncomment this and update version when PR merged
@@ -12,4 +12,4 @@ dependency "archive" version="~>0.6.0"
 // that todo stops applying below
 dependency "slowtable:common" path="../"
 targetPath "../bin"
-targetName "slowparser"
+targetName "stparse"
