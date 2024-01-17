@@ -9,8 +9,9 @@ import parser, common;
 void main(string[] args){
 	string filename;
 	uint sheetNumber;
-	if (args.length < 2){
-		stderr.writefln!"Usage:\n\t%s timetable.ods [sheetIndex]"(args[0]);
+	int offset;
+	if (args.length < 2 || args[1] == "--help" || args[1] == "-h"){
+		stderr.writefln!"Usage:\n\t%s timetable.ods [sheetIndex] [offset]"(args[0]);
 		exit(1);
 	}
 	filename = args[1];
@@ -22,10 +23,20 @@ void main(string[] args){
 			exit(1);
 		}
 	}
+	if (args.length > 3){
+		try{
+			offset = args[3].to!int;
+		} catch (Exception){
+			stderr.writeln("Invalid offset");
+			exit(1);
+		}
+	}
 	writefln!"%s[%d]"(filename.baseName, sheetNumber);
 	try{
-		foreach (Class c; Parser(filename, sheetNumber, TimeOfDay(8, 0)))
+		foreach (Class c; Parser(filename, sheetNumber, TimeOfDay(8, 0))){
+			c.time += dur!"minutes"(offset);
 			writeln(c.serialize);
+		}
 	} catch (Exception e){
 		stderr.writeln(e.msg);
 		exit(1);
