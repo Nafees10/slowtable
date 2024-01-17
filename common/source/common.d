@@ -176,7 +176,8 @@ TimeOfDay[2] classesTimeMinMax(Class[] classes){
 ///
 /// Returns: true if clashes
 bool overlaps(Class a, Class b) pure {
-	return a.time < b.time + b.duration && b.time < a.time + a.duration;
+	return a.day == b.day &&
+		a.time < b.time + b.duration && b.time < a.time + a.duration;
 }
 
 /// Cleans up a name/section string
