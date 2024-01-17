@@ -145,7 +145,7 @@ struct ClashMap{
 	/// constructor
 	this(Class[] classes){
 		foreach (i, a; classes){
-			foreach (b; classes[i + 1 .. $]){
+			foreach (b; classes){
 				if (a.overlaps(b))
 					add(a.name, a.section, b.name, b.section);
 			}
