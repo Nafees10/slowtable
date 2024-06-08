@@ -1,12 +1,13 @@
 module common;
 
-import std.json,
+import std.algorithm,
 			 std.datetime,
 			 std.format,
-			 std.algorithm,
 			 std.string,
-			 std.uni,
-			 std.conv : to;
+			 std.array,
+			 std.range,
+			 std.conv,
+			 std.uni;
 
 /// Stores information about a single class session
 struct Class{
@@ -59,17 +60,6 @@ struct Class{
 		return ret;
 	}
 
-	/// Returns: whether this equals another Class
-	/*bool opEquals(ref Class rhs) const pure {
-		return
-			this.name == rhs.name &&
-			this.section == rhs.section &&
-			this.venue == rhs.venue &&
-			this.day == rhs.day &&
-			this.time == rhs.time &&
-			this.duration == rhs.duration;
-	}*/
-
 	/// encode's time for comparison, for a Class
 	///
 	/// Returns: encoded time
@@ -78,17 +68,6 @@ struct Class{
 		ret = day << 20;
 		ret |= (dur!"hours"(time.hour) + dur!"minutes"(time.minute) +
 			dur!"seconds"(time.second)).total!"seconds";
-		return ret;
-	}
-
-	JSONValue jsonOf() const {
-		JSONValue ret;
-		ret["day"] = JSONValue(day.to!string);
-		ret["time"] = JSONValue(time.toISOExtString);
-		ret["duration"] = JSONValue(duration.total!"minutes");
-		ret["name"] = JSONValue(name);
-		ret["section"] = JSONValue(section);
-		ret["venue"] = JSONValue(venue);
 		return ret;
 	}
 
@@ -101,17 +80,9 @@ struct Class{
 		this.section = section;
 		this.venue = venue;
 	}
-
-	this(JSONValue json){
-		day = json["day"].get!string.to!DayOfWeek;
-		time = TimeOfDay.fromISOExtString(json["time"].get!string);
-		duration = dur!"minutes"(json["duration"].get!int);
-		name = json["name"].get!string;
-		section = json["section"].get!string;
-		venue = json["venue"].get!string;
-	}
 }
 
+///
 unittest{
 	Class c = Class(DayOfWeek.mon, TimeOfDay(8, 0), dur!"minutes"(120),
 			"Programming", "BSE-4A", "CS-1");
@@ -145,13 +116,40 @@ unittest{
 	assert (d.venue == c.venue);
 }
 
+/// A timetable (collection of Classes)
+struct Timetable{
+	string name;
+	Class[] classes;
+
+	/// parses timetable from a input range
+	static Timetable parse(Range)(Range input)
+			if (isInputRange!Range && is (ElementType!Range == string)){
+		Timetable ret;
+		foreach (line; input){
+			if (line == "over")
+				continue;
+			if (ret.name is null && line.length && line[0] != '\t'){
+				ret.name = line.idup;
+				continue;
+			}
+			try{
+				Class c = Class.deserialize(line.chomp("\n").idup);
+				ret.classes ~= c;
+			} catch (Exception){
+				ret ~= Timetable(line.idup);
+			}
+		}
+		return ret;
+	}
+}
+
 /// Sorts classes by time
-void classesSortByTime(ref Class[] classes){
+void sortByTime(ref Class[] classes){
 	classes.sort!"a.timeEncode < b.timeEncode";
 }
 
 /// Sorts classes by venue and day
-Class[][string][DayOfWeek] classesSortByDayVenue(Class[] classes){
+Class[][string][DayOfWeek] sortByVenueDay(Class[] classes){
 	Class[][string][DayOfWeek] ret;
 	foreach (c; classes)
 		ret[c.day][c.venue] ~= c;
@@ -160,7 +158,7 @@ Class[][string][DayOfWeek] classesSortByDayVenue(Class[] classes){
 
 /// Finds earliest starting time, and latest ending time
 /// Returns: [starting time, ending time]
-TimeOfDay[2] classesTimeMinMax(Class[] classes){
+TimeOfDay[2] timeMinMax(Class[] classes){
 	TimeOfDay min = TimeOfDay.max, max = TimeOfDay.min;
 	foreach (c; classes){
 		if (c.time < min)
@@ -207,16 +205,9 @@ unittest{
 /// Separates section from course.
 /// Returns: [section, course], string array length 2
 string[2] separateSectionCourse(string str) pure {
-	const int start = cast(int)str.indexOf('('), end = cast(int)str.indexOf(')');
+	int start = cast(int)str.indexOf('('),
+			end = cast(int)str.indexOf(')');
 	if (start < 0 || end <= start)
 		return [null, str];
 	return [str[start + 1 .. end].strip, str[0 .. start].strip];
-}
-/// ditto
-string[2][] separateSectionCourse(string[] str) pure {
-	string[2][] ret;
-	ret.length = str.length;
-	foreach (i, s; str)
-		ret[i] = separateSectionCourse(s);
-	return ret;
 }
