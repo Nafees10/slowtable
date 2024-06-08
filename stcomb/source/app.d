@@ -6,6 +6,8 @@ import std.stdio,
 
 import core.stdc.stdlib;
 
+import utils.ds;
+
 import common,
 			 rater;
 
@@ -50,86 +52,6 @@ void main(string[] args){
 				continue;
 			nameSec[c.name] ~= c.section;
 		}
-
-		Class[][] combinations = genComb(classes, nameSec);
-		uint[] ratings = combinations.map!(a =>
-				rate(a, weights[0], weights[1], weights[1])
-				).array;
-		sortByRatings(combinations, ratings);
-		foreach (i, tt; combinations){
-			writefln!"%s Combination %d Rating: %d"(name, i, ratings[i]);
-			foreach (session; tt)
-				writeln(session.serialize);
-			writeln("over");
-		}
-	}
-}
-
-/// Sorts timetables by ratings
-void sortByRatings(Class[][] timetables, uint[] ratings){
-	// good ol' bubble sort
-	bool sorted = false;
-	while (!sorted){
-		sorted = true;
-		for (int i = 1; i < ratings.length; i ++){
-			if (ratings[i - 1] <= ratings[i])
-				continue;
-			sorted = false;
-			Class[] tt = timetables[i - 1];
-			uint r = ratings[i - 1];
-			timetables[i - 1] = timetables[i];
-			timetables[i] = tt;
-			ratings[i - 1] = ratings[i];
-			ratings[i] = r;
-		}
-	}
-}
-
-/// Generate all combinations.
-Class[][] genComb(Class[] classes, string[][string] nameSec){
-	ClashMap clashes = ClashMap(classes);
-	if (nameSec.length > COURSES_LIMIT)
-		throw new Exception(
-				"Refusing to generate combinations for that many courses");
-	if (nameSec.keys.length){
-		return genComb(classes, nameSec, clashes, 0);
-	}
-	return null;
-}
-
-Class[][] genComb(Class[] classes, string[][string] nameSec,
-		ClashMap clashes, uint index){
-	static Set!string picks;
-	immutable bool isLeaf = index + 1 == nameSec.keys.length;
-	immutable string course = nameSec.keys[index];
-	Class[][] ret;
-	foreach (sec; nameSec[course]){
-		immutable string selection = course ~ '-' ~ sec;
-		if (clashes.clashes(picks, selection))
-			continue;
-		picks.add(selection);
-		if (isLeaf) {
-			ret ~= subset(classes, picks);
-		} else {
-			ret ~= genComb(classes, nameSec, clashes, index + 1);
-		}
-		picks.remove(selection);
-	}
-	return ret;
-}
-
-/// A Set of type `T`
-struct Set(T){
-	void[0][T] set;
-	alias set this;
-	void add(T val){
-		set[val] = (void[0]).init;
-	}
-	bool exists(T val){
-		return (val in set) !is null;
-	}
-	void remove(T val){
-		set.remove(val);
 	}
 }
 
@@ -157,7 +79,7 @@ struct ClashMap{
 		immutable string key = aName ~ '-' ~ aSec;
 		if (key !in sets)
 			sets[key] = Set!string.init;
-		sets[aName ~ '-' ~ aSec].add(bName ~ '-' ~ bSec);
+		sets[aName ~ '-' ~ aSec].put(bName ~ '-' ~ bSec);
 	}
 
 	/// Returns: whether a pair of classes clash
