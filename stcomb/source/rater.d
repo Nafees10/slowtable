@@ -62,7 +62,7 @@ uint rateGaps(Class[][DayOfWeek] classes){
 /// Returns: rating, 0 to 1000. Lower is better
 uint rate(Class[] classes, uint consistency = 1, uint days = 1, uint gaps = 1){
 	int ret;
-	classesSortByTime(classes);
+	classes.sortByTime;
 	Class[][DayOfWeek] byDays;
 
 	if (consistency && gaps){
