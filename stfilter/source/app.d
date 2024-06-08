@@ -1,5 +1,7 @@
-import std.stdio,
-			 std.string;
+import std.algorithm,
+			 std.string,
+			 std.array,
+			 std.stdio;
 
 import classfilter,
 			 common;
@@ -65,8 +67,10 @@ void main(string[] args){
 	filters.sectionsNeg = opts.sectionsNeg;
 	filters.coursesNeg = opts.coursesNeg;
 
-	filters.coursesSectionRel = separateSectionCourse(opts.coursesSection);
-	filters.coursesSectionNeg = separateSectionCourse(opts.coursesSectionNeg);
+	filters.coursesSectionRel = opts.coursesSection
+		.map!(s => s.separateSectionCourse).array;
+	filters.coursesSectionNeg = opts.coursesSectionNeg
+		.map!(s => s.separateSectionCourse).array;
 
 	while (!stdin.eof){
 		string line = readln.chomp("\n");
