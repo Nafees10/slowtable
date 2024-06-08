@@ -98,14 +98,14 @@ tr:nth-child(even){background-color:#f2f2f2;}
 
 /// Generates a HTML table for classes
 string generateTable(Class[] classesUnsorted, uint interval){
-	TimeOfDay[2] timeExtremes = classesTimeMinMax(classesUnsorted);
+	TimeOfDay[2] timeExtremes = classesUnsorted.timeMinMax;
 	TimeOfDay timeMin = timeExtremes[0], timeMax = timeExtremes[1];
 	string ret;
 
-	Class[][string][DayOfWeek] classes = classesSortByDayVenue(classesUnsorted);
+	Class[][string][DayOfWeek] classes = classesUnsorted.sortByVenueDay;
 	foreach (ref classesOfDay; classes){
 		foreach (ref classesByVenue; classesOfDay)
-			classesSortByTime(classesByVenue);
+			classesByVenue.sortByTime;
 	}
 
 	string[string] colors = colorize(classesUnsorted);
