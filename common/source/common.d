@@ -129,15 +129,13 @@ struct Timetable{
 			if (line == "over")
 				continue;
 			if (ret.name is null && line.length && line[0] != '\t'){
-				ret.name = line.idup;
+				ret.name = line;
 				continue;
 			}
 			try{
 				Class c = Class.deserialize(line.chomp("\n").idup);
 				ret.classes ~= c;
-			} catch (Exception){
-				ret ~= Timetable(line.idup);
-			}
+			} catch (Exception){}
 		}
 		return ret;
 	}
