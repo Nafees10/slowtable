@@ -2,6 +2,7 @@ import std.stdio,
 			 std.conv,
 			 std.array,
 			 std.string,
+			 std.typecons,
 			 std.algorithm;
 
 import core.stdc.stdlib;
@@ -30,77 +31,88 @@ void main(string[] args){
 	}
 
 	while (!stdin.eof){
-		string line = readln.chomp("\n");
-		if (line.length == 0) continue;
-		immutable string name = line;
-		Class[] classes;
-		string[][string] nameSec;
-
-		while (!stdin.eof){
-			line = readln.chomp("\n");
-			if (line == "over")
-				break;
-			Class c;
-			try {
-				c = Class.deserialize(line);
-			} catch (Exception) {
-				continue;
-			}
-			classes ~= c;
-			if (c.name in nameSec &&
-					nameSec[c.name].canFind(c.section))
-				continue;
-			nameSec[c.name] ~= c.section;
-		}
+		Timetable tt = Timetable.parse(stdin.byLineCopy);
+		if (tt.classes is null)
+			continue;
 	}
 }
 
-/// Returns: a subset of timetable, containing only set classes sections
-Class[] subset(Class[] classes, Set!string set){
-	return classes.filter!(c => set.exists(c.name ~ '-' ~ c.section)).array;
+alias CourseSection = Tuple!(size_t, "cId", size_t, "sId");
+
+/// Maps courses/sections to continuous integers
+struct ClassMap{
+	size_t[string] cId; /// maps names to ids
+	size_t[string][string] sId; /// maps names to map of sections to ids
+	string[] courses; /// maps ids to names
+	string[][] sections; /// maps ids to sections of course ids
+	Class[][][] sessions; /// sessions for each section id of each course id
+
+	CourseSection conv(string name, string section) const pure {
+		CourseSection ret;
+		if (name !in cId || name !in sId || section !in sId[name])
+			throw new Exception(format!"%s-%s not found in ClassMap"(name, section));
+		ret.cId = cId[name];
+		ret.sId = sId[name][section];
+		return ret;
+	}
+
+	Tuple!(string, string) conv(CourseSection cs) const pure {
+		if (cs.cId > courses.length || cs.sId > sections[cs.cId].length)
+			throw new Exception("CourseSection out of bounds in ClassMap");
+		return tuple(courses[cs.cId], sections[cs.cId][cs.sId]);
+	}
+
+	@disable this();
+	this(Class[] tt) pure {
+		foreach (Class c; tt){
+			if (c.name !in cId){
+				cId[c.name] = courses.length;
+				courses ~= c.name;
+				sId[c.name] = null;
+				sections ~= null;
+			}
+			immutable size_t courseId = cId[c.name];
+			if (c.section !in sId[c.name]){
+				sId[c.name][c.section] = sections[courseId].length;
+				sections[courseId] ~= c.section;
+			}
+			immutable size_t sectionId = sId[c.name][c.name];
+			sessions[courseId][sectionId] ~= c;
+		}
+	}
+	this(Timetable tt) pure {
+		this(tt.classes);
+	}
 }
 
 /// Stores overlap info about classes
 struct ClashMap{
-	Set!string[string] sets;
+	Set!CourseSection[CourseSection] sets;
 
 	/// constructor
-	this(Class[] classes){
-		foreach (i, a; classes){
-			foreach (b; classes){
-				if (a.overlaps(b))
-					add(a.name, a.section, b.name, b.section);
+	this(Class[] classes, ref const ClassMap map) pure {
+		foreach (i, Class a; classes){
+			foreach (Class b; classes){
+				if (!a.overlaps(b))
+					continue;
+				add(map.conv(a.name, a.section), map.conv(b.name, b.section));
 			}
 		}
 	}
 
 	/// Add a clashing pair of classes
-	void add(string aName, string aSec, string bName, string bSec){
-		immutable string key = aName ~ '-' ~ aSec;
-		if (key !in sets)
-			sets[key] = Set!string.init;
-		sets[aName ~ '-' ~ aSec].put(bName ~ '-' ~ bSec);
+	void add(CourseSection a, CourseSection b) pure {
+		if (a !in sets)
+			sets[a] = Set!CourseSection.init;
+		sets[a].put(b);
+		if (b !in sets)
+			sets[b] = Set!CourseSection.init;
+		sets[b].put(a);
 	}
 
 	/// Returns: whether a pair of classes clash
-	bool clashes(string aName, string aSec, string bName, string bSec){
-		immutable a = aName ~ '-' ~ aSec, b =  bName ~ '-' ~ bSec;
-		return (a in sets && sets[a].exists(b)) || (b in sets && sets[b].exists(a));
+	bool clashes(CourseSection a, CourseSection b){
+		return a in sets && sets[a].exists(b);
 	}
-
-	/// Returns: whether a course will clash with other picked courses
-	bool clashes(Set!string picks, string name, string sec){
-		return clashes(picks, name ~ '-' ~ sec);
-	}
-	/// ditto
-	bool clashes(Set!string picks, string cmp){
-		if (cmp !in sets)
-			return false;
-		Set!string clashSet = sets[cmp];
-		foreach (key; clashSet.keys){
-			if (picks.exists(key))
-				return true;
-		}
-		return false;
-	}
+	// TODO: continue from here
 }
