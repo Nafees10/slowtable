@@ -47,6 +47,7 @@ struct ClassMap{
 	string[][] sections; /// maps ids to sections of course ids
 	Class[][][] sessions; /// sessions for each section id of each course id
 
+	/// Returns: CourseSection against a section name and section
 	CourseSection conv(string name, string section) const pure {
 		CourseSection ret;
 		if (name !in cId || name !in sId || section !in sId[name])
@@ -56,6 +57,12 @@ struct ClassMap{
 		return ret;
 	}
 
+	/// ditto
+	CourseSection conv(ref const Class c) const pure {
+		return conv(c.name, c.section);
+	}
+
+	/// Returns: tuple(courseName, sectionName) from a CourseSection
 	Tuple!(string, string) conv(CourseSection cs) const pure {
 		if (cs.cId > courses.length || cs.sId > sections[cs.cId].length)
 			throw new Exception("CourseSection out of bounds in ClassMap");
@@ -95,7 +102,7 @@ struct ClashMap{
 			foreach (Class b; classes){
 				if (!a.overlaps(b))
 					continue;
-				add(map.conv(a.name, a.section), map.conv(b.name, b.section));
+				add(map.conv(a), map.conv(b));
 			}
 		}
 	}
