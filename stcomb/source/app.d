@@ -94,7 +94,10 @@ struct ClassMap{
 
 /// Stores overlap info about classes
 struct ClashMap{
-	Set!CourseSection[CourseSection] sets;
+	/// maps CourseSection to set of clashing CourseSection(s)
+	Set!CourseSection[CourseSection] clashSets;
+	/// tuples of clashing pairs of CourseSections
+	Set!(Tuple!(CourseSection, CourseSection)) clashPairs;
 
 	/// constructor
 	this(Class[] classes, ref const ClassMap map) pure {
@@ -109,17 +112,22 @@ struct ClashMap{
 
 	/// Add a clashing pair of classes
 	void add(CourseSection a, CourseSection b) pure {
-		if (a !in sets)
-			sets[a] = Set!CourseSection.init;
-		sets[a].put(b);
-		if (b !in sets)
-			sets[b] = Set!CourseSection.init;
-		sets[b].put(a);
+		if (a !in clashSets)
+			clashSets[a] = Set!CourseSection.init;
+		clashSets[a].put(b);
+		if (b !in clashSets)
+			clashSets[b] = Set!CourseSection.init;
+		clashSets[b].put(a);
+
+		if (tuple(a, b) !in clashPairs)
+			clashPairs.put(tuple(a, b));
+		if (tuple(b, a) !in clashPairs)
+			clashPairs.put(tuple(b, a));
 	}
 
 	/// Returns: whether a pair of classes clash
 	bool clashes(CourseSection a, CourseSection b){
-		return a in sets && sets[a].exists(b);
+		return a in clashSets && clashSets[a].exists(b);
 	}
 	// TODO: continue from here
 }
