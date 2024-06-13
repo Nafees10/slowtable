@@ -34,18 +34,42 @@ void main(string[] args){
 		Timetable tt = Timetable.parse(stdin.byLineCopy);
 		if (tt.classes is null)
 			continue;
+		ClassMap idMapper = new ClassMap(tt);
+		ClashMap clasher = new ClashMap(tt, idMapper);
 	}
 }
 
 alias CourseSection = Tuple!(size_t, "cId", size_t, "sId");
 
 /// Maps courses/sections to continuous integers
-struct ClassMap{
+final class ClassMap{
+public:
 	size_t[string] cId; /// maps names to ids
 	size_t[string][string] sId; /// maps names to map of sections to ids
 	string[] courses; /// maps ids to names
 	string[][] sections; /// maps ids to sections of course ids
 	Class[][][] sessions; /// sessions for each section id of each course id
+
+	this(Class[] tt) pure {
+		foreach (Class c; tt){
+			if (c.name !in cId){
+				cId[c.name] = courses.length;
+				courses ~= c.name;
+				sId[c.name] = null;
+				sections ~= null;
+			}
+			immutable size_t courseId = cId[c.name];
+			if (c.section !in sId[c.name]){
+				sId[c.name][c.section] = sections[courseId].length;
+				sections[courseId] ~= c.section;
+			}
+			immutable size_t sectionId = sId[c.name][c.name];
+			sessions[courseId][sectionId] ~= c;
+		}
+	}
+	this(Timetable tt) pure {
+		this(tt.classes);
+	}
 
 	/// Returns: CourseSection against a section name and section
 	CourseSection conv(string name, string section) const pure {
@@ -68,39 +92,21 @@ struct ClassMap{
 			throw new Exception("CourseSection out of bounds in ClassMap");
 		return tuple(courses[cs.cId], sections[cs.cId][cs.sId]);
 	}
-
-	@disable this();
-	this(Class[] tt) pure {
-		foreach (Class c; tt){
-			if (c.name !in cId){
-				cId[c.name] = courses.length;
-				courses ~= c.name;
-				sId[c.name] = null;
-				sections ~= null;
-			}
-			immutable size_t courseId = cId[c.name];
-			if (c.section !in sId[c.name]){
-				sId[c.name][c.section] = sections[courseId].length;
-				sections[courseId] ~= c.section;
-			}
-			immutable size_t sectionId = sId[c.name][c.name];
-			sessions[courseId][sectionId] ~= c;
-		}
-	}
-	this(Timetable tt) pure {
-		this(tt.classes);
-	}
 }
 
 /// Stores overlap info about classes
-struct ClashMap{
+final class ClashMap{
+public:
 	/// maps CourseSection to set of clashing CourseSection(s)
 	Set!CourseSection[CourseSection] clashSets;
 	/// tuples of clashing pairs of CourseSections
 	Set!(Tuple!(CourseSection, CourseSection)) clashPairs;
+	/// ClassMap instance
+	ClassMap map;
 
 	/// constructor
-	this(Class[] classes, ref const ClassMap map) pure {
+	this(Class[] classes, ClassMap map) pure {
+		this.map = map;
 		foreach (i, Class a; classes){
 			foreach (Class b; classes){
 				if (!a.overlaps(b))
@@ -108,6 +114,10 @@ struct ClashMap{
 				add(map.conv(a), map.conv(b));
 			}
 		}
+	}
+	/// ditto
+	this(Timetable tt, ClassMap map) pure {
+		this(tt.classes, map);
 	}
 
 	/// Add a clashing pair of classes
@@ -127,7 +137,11 @@ struct ClashMap{
 
 	/// Returns: whether a pair of classes clash
 	bool clashes(CourseSection a, CourseSection b){
-		return a in clashSets && clashSets[a].exists(b);
+		return (tuple(a, b) in clashPairs) !is null;
 	}
-	// TODO: continue from here
+}
+
+final class TreeNode{
+public:
+	CourseSection cs;
 }
