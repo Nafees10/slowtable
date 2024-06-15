@@ -3,6 +3,7 @@ import std.stdio,
 			 std.array,
 			 std.string,
 			 std.typecons,
+			 std.bitmanip,
 			 std.algorithm;
 
 import core.stdc.stdlib;
@@ -34,114 +35,97 @@ void main(string[] args){
 		Timetable tt = Timetable.parse(stdin.byLineCopy);
 		if (tt.classes is null)
 			continue;
-		ClassMap idMapper = new ClassMap(tt);
-		ClashMap clasher = new ClashMap(tt, idMapper);
+		ClassMap map = new ClassMap(tt);
 	}
 }
-
-alias CourseSection = Tuple!(size_t, "cId", size_t, "sId");
 
 /// Maps courses/sections to continuous integers
 final class ClassMap{
 public:
-	size_t[string] cId; /// maps names to ids
-	size_t[string][string] sId; /// maps names to map of sections to ids
-	string[] courses; /// maps ids to names
-	string[][] sections; /// maps ids to sections of course ids
-	Class[][][] sessions; /// sessions for each section id of each course id
-
-	this(Class[] tt) pure {
-		foreach (Class c; tt){
-			if (c.name !in cId){
-				cId[c.name] = courses.length;
-				courses ~= c.name;
-				sId[c.name] = null;
-				sections ~= null;
-			}
-			immutable size_t courseId = cId[c.name];
-			if (c.section !in sId[c.name]){
-				sId[c.name][c.section] = sections[courseId].length;
-				sections[courseId] ~= c.section;
-			}
-			immutable size_t sectionId = sId[c.name][c.name];
-			sessions[courseId][sectionId] ~= c;
-		}
-	}
-	this(Timetable tt) pure {
-		this(tt.classes);
-	}
-
-	/// Returns: CourseSection against a section name and section
-	CourseSection conv(string name, string section) const pure {
-		CourseSection ret;
-		if (name !in cId || name !in sId || section !in sId[name])
-			throw new Exception(format!"%s-%s not found in ClassMap"(name, section));
-		ret.cId = cId[name];
-		ret.sId = sId[name][section];
-		return ret;
-	}
-
-	/// ditto
-	CourseSection conv(ref const Class c) const pure {
-		return conv(c.name, c.section);
-	}
-
-	/// Returns: tuple(courseName, sectionName) from a CourseSection
-	Tuple!(string, string) conv(CourseSection cs) const pure {
-		if (cs.cId > courses.length || cs.sId > sections[cs.cId].length)
-			throw new Exception("CourseSection out of bounds in ClassMap");
-		return tuple(courses[cs.cId], sections[cs.cId][cs.sId]);
-	}
-}
-
-/// Stores overlap info about classes
-final class ClashMap{
-public:
-	/// maps CourseSection to set of clashing CourseSection(s)
-	Set!CourseSection[CourseSection] clashSets;
+	/// maps sid to set of clashing CourseSection(s)
+	BitArray[] clashMatrix;
 	/// tuples of clashing pairs of CourseSections
-	Set!(Tuple!(CourseSection, CourseSection)) clashPairs;
-	/// ClassMap instance
-	ClassMap map;
+	Set!(Tuple!(size_t, size_t)) clashPairs;
+
+	/// maps names to sids
+	size_t[Tuple!(string, string)] sids;
+	/// maps course name to [sid_start, sid_count]
+	Tuple!(size_t, size_t)[string] courseSids;
+
+	/// maps sid to [courseName, sectionName]
+	Tuple!(string, string)[] names;
+	/// maps sid to Class[], sessions of this sid
+	Class[][] sessions;
 
 	/// constructor
-	this(Class[] classes, ClassMap map) pure {
-		this.map = map;
-		foreach (i, Class a; classes){
-			foreach (Class b; classes){
-				if (!a.overlaps(b))
-					continue;
-				add(map.conv(a), map.conv(b));
-			}
-		}
+	this(Timetable tt) pure {
+		build(tt.classes);
 	}
 	/// ditto
-	this(Timetable tt, ClassMap map) pure {
-		this(tt.classes, map);
+	this (Class[] tt) pure {
+		build(tt);
 	}
 
-	/// Add a clashing pair of classes
-	void add(CourseSection a, CourseSection b) pure {
-		if (a !in clashSets)
-			clashSets[a] = Set!CourseSection.init;
-		clashSets[a].put(b);
-		if (b !in clashSets)
-			clashSets[b] = Set!CourseSection.init;
-		clashSets[b].put(a);
-
-		if (tuple(a, b) !in clashPairs)
-			clashPairs.put(tuple(a, b));
-		if (tuple(b, a) !in clashPairs)
-			clashPairs.put(tuple(b, a));
+	/// Resets this object
+	void reset() pure {
+		clashMatrix = null;
+		clashPairs = null;
+		sids = null;
+		courseSids = null;
+		names = null;
+		sessions = null;
 	}
 
-	/// Returns: whether a pair of classes clash
-	bool clashes(CourseSection a, CourseSection b){
-		return (tuple(a, b) in clashPairs) !is null;
+	/// Builds this object from Class[].
+	/// **Be sure to call `reset` on this before if not newly constructed**
+	void build(Class[] tt) pure {
+		// separate into courses and sections
+		size_t sidCount;
+		Class[][string][string] categ;
+		foreach (Class c; tt){
+			if (c.name !in categ)
+				categ[c.name] = null;
+			if (c.section !in categ[c.name]){
+				categ[c.name][c.section] = null;
+				sidCount ++;
+			}
+			categ[c.name][c.section] ~= c;
+		}
+
+		// build sids, courseSids, names, and sessions
+		sessions.length = sidCount;
+		names.length = sidCount;
+		size_t sidNext;
+		foreach (string course, Class[][string] sections; categ){
+			courseSids[course] = tuple(sidNext, sections.length);
+			foreach (string section, Class[] classes; sections){
+				sids[tuple(course, section)] = sidNext;
+				names[sidNext] = tuple(course, section);
+				sessions[sidNext] = classes;
+				sidNext ++;
+			}
+		}
+		assert (sidNext == sidCount);
+
+		/// build clashMatrix
+		clashMatrix.length = sidCount;
+		foreach (size_t sid, Class a; tt){
+			clashMatrix[sid] = BitArray(
+					new void[(sidCount + (size_t.sizeof - 1)) / size_t.sizeof],
+					sidCount);
+			foreach (size_t i, Class b; tt[])
+				clashMatrix[sid][i] = !a.overlaps(b);
+		}
+	}
+
+	/// Returns: whether a pair of sections clash
+	bool clashes(size_t a, size_t b){
+		return clashMatrix[a][b] == false;
 	}
 }
 
 final class TreeNode{
 public:
-	CourseSection cs;
+	size_t sid;
+	TreeNode[] next;
 }
