@@ -44,8 +44,6 @@ final class ClassMap{
 public:
 	/// maps sid to set of clashing CourseSection(s)
 	BitArray[] clashMatrix;
-	/// tuples of clashing pairs of CourseSections
-	Set!(Tuple!(size_t, size_t)) clashPairs;
 
 	/// maps names to sids
 	size_t[Tuple!(string, string)] sids;
@@ -69,7 +67,6 @@ public:
 	/// Resets this object
 	void reset() pure {
 		clashMatrix = null;
-		clashPairs = null;
 		sids = null;
 		courseSids = null;
 		names = null;
@@ -115,6 +112,8 @@ public:
 					sidCount);
 			foreach (size_t i, Class b; tt[])
 				clashMatrix[sid][i] = !a.overlaps(b);
+			// sid never clashes with itself
+			clashMatrix[sid][sid] = true;
 		}
 	}
 
