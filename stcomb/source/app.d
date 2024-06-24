@@ -13,9 +13,6 @@ import utils.ds;
 import common,
 			 rater;
 
-/// maximum number of courses this will let you generate combinations for
-enum COURSES_LIMIT = 15; // what insane person wants this much?
-
 void main(string[] args){
 	if (args.canFind("-h") || args.canFind("--help")){
 		writeln("Usage:\n\t", args[0], " consistencyWeight daysWeight gapsWeight");
@@ -123,6 +120,14 @@ public:
 	}
 }
 
+/// Stores rating for a combination
+/// integers, one for each DayOfWeek
+alias Rating = size_t[7];
+
+/// Stores mean time for a combination, for each DayOfWeek
+alias MeanTime = float[7];
+
+/// A Node in the combinations tree
 final class TreeNode{
 public:
 	size_t sid;
