@@ -10,8 +10,7 @@ import core.stdc.stdlib;
 
 import utils.ds;
 
-import common,
-			 rater;
+import common;
 
 void main(string[] args){
 	if (args.canFind("-h") || args.canFind("--help")){
@@ -103,7 +102,8 @@ public:
 
 		/// build clashMatrix
 		clashMatrix.length = sidCount;
-		foreach (size_t sid, Class a; tt){
+		foreach (Class a; tt){
+			immutable size_t sid = sids[tuple(a.name, a.section)];
 			clashMatrix[sid] = BitArray(
 					new void[(sidCount + (size_t.sizeof - 1)) / size_t.sizeof],
 					sidCount);
@@ -120,16 +120,13 @@ public:
 	}
 }
 
-/// Stores rating for a combination
-/// integers, one for each DayOfWeek
-alias Rating = size_t[7];
-
 /// Stores mean time for a combination, for each DayOfWeek
 alias MeanTime = float[7];
 
 /// A Node in the combinations tree
 final class TreeNode{
 public:
+	MeanTime mt;
 	size_t sid;
 	TreeNode[] next;
 }
