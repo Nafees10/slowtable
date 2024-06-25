@@ -1,12 +1,13 @@
 import std.stdio,
 			 std.conv,
+			 std.math,
 			 std.array,
 			 std.string,
 			 std.typecons,
 			 std.bitmanip,
 			 std.algorithm;
 
-import core.stdc.stdlib;
+import core.stdc.stdlib : exit;
 
 import utils.ds;
 
@@ -32,6 +33,7 @@ void main(string[] args){
 		if (tt.classes is null)
 			continue;
 		ClassMap map = new ClassMap(tt);
+		immutable size_t courseCount = map.courseSids.length;
 	}
 }
 
@@ -103,14 +105,16 @@ public:
 		/// build clashMatrix
 		clashMatrix.length = sidCount;
 		foreach (Class a; tt){
-			immutable size_t sid = sids[tuple(a.name, a.section)];
-			clashMatrix[sid] = BitArray(
+			immutable size_t sidA = sids[tuple(a.name, a.section)];
+			clashMatrix[sidA] = BitArray(
 					new void[(sidCount + (size_t.sizeof - 1)) / size_t.sizeof],
 					sidCount);
-			foreach (size_t i, Class b; tt[])
-				clashMatrix[sid][i] = !a.overlaps(b);
+			foreach (Class b; tt){
+				immutable size_t sidB = sids[tuple(b.name, b.section)];
+				clashMatrix[sidA][sidB] = !a.overlaps(b);
+			}
 			// sid never clashes with itself
-			clashMatrix[sid][sid] = true;
+			clashMatrix[sidA][sidA] = true;
 		}
 	}
 
@@ -120,13 +124,79 @@ public:
 	}
 }
 
-/// Stores mean time for a combination, for each DayOfWeek
-alias MeanTime = float[7];
+/// An iterator for sids, while excluding certain sids
+struct SidIterator{
+	private Tuple!(size_t, size_t)[] skip;
+	private size_t curr = 0;
+	private size_t len;
+	@disable this();
+	@property bool empty() pure const {
+		return curr >= len;
+	}
+	/// `exclude` is sids to exclude
+	this(ClassMap map, Set!size_t exclude) pure {
+		Heap!(Tuple!(size_t, size_t), "a[0] < b[0]") heap;
+		heap = new typeof(heap);
+		foreach (sid; exclude.keys)
+			heap.put(map.courseSids[map.names[sid][0]]);
+		skip = heap.array;
+		curr = 0;
+		len = map.names.length;
+		popFront();
+	}
+
+	size_t front() pure const {
+		return curr;
+	}
+
+	void popFront() pure {
+		if (empty) return;
+		curr ++;
+		while (skip.length){
+			if (curr != skip[0][0])
+				return;
+			curr += skip[0][1];
+			skip = skip[1 .. $];
+		}
+	}
+}
 
 /// A Node in the combinations tree
 final class TreeNode{
 public:
-	MeanTime mt;
-	size_t sid;
-	TreeNode[] next;
+	ClassMap map;
+	float[7] mt = 0; /// mean times for each day
+	size_t[7] dc = 0; /// session counts for each day
+	float dv = 0; /// sum of deviations from mean
+	Set!size_t picks; /// picked sids
+
+	this(TreeNode parent, ClassMap map, size_t pick){
+		this.map = map;
+		picks = Set!size_t(parent.picks.keys);
+		mt = parent.mt;
+		dv = parent.dv;
+		picks.put(pick);
+		// update dc
+		foreach (Class c; map.sessions[pick]){
+			immutable size_t time =
+				c.time.second + 60 * (c.time.minute + (60 * c.time.hour));
+			mt[c.day] = ((mt[c.day] * dc[c.day]) + time) / (dc[c.day] + 1);
+			dc[c.day] ++;
+		}
+		// update dv
+		foreach (Class c; map.sessions[pick]){
+			immutable size_t time =
+				c.time.second + 60 * (c.time.minute + (60 * c.time.hour));
+			dv += abs(mt[c.day] - time);
+		}
+	}
+
+	/// Returns: next nodes after this
+	Heap!(TreeNode, "a.dv < b.dv") next(ClassMap map){
+		Heap!(TreeNode, "a.dv < b.dv") heap;
+		heap = new typeof(heap);
+		foreach (size_t sid; SidIterator(map, picks))
+			heap.put(new TreeNode(this, map, sid));
+		return heap;
+	}
 }
