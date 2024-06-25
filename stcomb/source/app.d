@@ -1,6 +1,7 @@
 import std.stdio,
 			 std.conv,
 			 std.math,
+			 std.json,
 			 std.array,
 			 std.string,
 			 std.typecons,
@@ -34,6 +35,8 @@ void main(string[] args){
 			continue;
 		ClassMap map = new ClassMap(tt);
 		immutable size_t courseCount = map.courseSids.length;
+		TreeNode node = new TreeNode(null, map);
+		node.jsonOf(5).toPrettyString.writeln;
 	}
 }
 
@@ -119,7 +122,7 @@ public:
 	}
 
 	/// Returns: whether a pair of sections clash
-	bool clashes(size_t a, size_t b){
+	bool clashes(size_t a, size_t b) pure const {
 		return clashMatrix[a][b] == false;
 	}
 }
@@ -134,7 +137,7 @@ struct SidIterator{
 		return curr >= len;
 	}
 	/// `exclude` is sids to exclude
-	this(ClassMap map, Set!size_t exclude) pure {
+	this(const ClassMap map, const ref Set!size_t exclude) pure {
 		Heap!(Tuple!(size_t, size_t), "a[0] < b[0]") heap;
 		heap = new typeof(heap);
 		foreach (sid; exclude.keys)
@@ -164,17 +167,22 @@ struct SidIterator{
 /// A Node in the combinations tree
 final class TreeNode{
 public:
-	ClassMap map;
+	const ClassMap map;
 	float[7] mt = 0; /// mean times for each day
 	size_t[7] dc = 0; /// session counts for each day
 	float dv = 0; /// sum of deviations from mean
 	Set!size_t picks; /// picked sids
 
-	this(TreeNode parent, ClassMap map, size_t pick){
+	this(const TreeNode parent, const ClassMap map,
+			size_t pick = size_t.max) pure {
 		this.map = map;
-		picks = Set!size_t(parent.picks.keys);
-		mt = parent.mt;
-		dv = parent.dv;
+		if (parent){
+			picks = Set!size_t(parent.picks.keys);
+			mt = parent.mt;
+			dv = parent.dv;
+		}
+		if (pick == size_t.max)
+			return;
 		picks.put(pick);
 		// update dc
 		foreach (Class c; map.sessions[pick]){
@@ -192,11 +200,30 @@ public:
 	}
 
 	/// Returns: next nodes after this
-	Heap!(TreeNode, "a.dv < b.dv") next(ClassMap map){
+	Heap!(TreeNode, "a.dv < b.dv") next() pure const {
 		Heap!(TreeNode, "a.dv < b.dv") heap;
 		heap = new typeof(heap);
 		foreach (size_t sid; SidIterator(map, picks))
 			heap.put(new TreeNode(this, map, sid));
 		return heap;
+	}
+
+	/// Returns: this as a json. Will result in a recursive `next()` call
+	JSONValue jsonOf(size_t depth = size_t.max) pure const {
+		JSONValue ret;
+		//ret["mt"] = JSONValue(mt);
+		//ret["dc"] = JSONValue(dc);
+		ret["dv"] = JSONValue(dv);
+		ret["picks"] = JSONValue(
+				picks.keys
+				.map!(p => map.names[p])
+				.map!(p => p[0] ~ p[1])
+				.array
+				);
+		if (depth == size_t.max)
+			ret["next"] = JSONValue(next.map!(a => a.jsonOf).array);
+		else if (depth)
+			ret["next"] = JSONValue(next.map!(a => a.jsonOf(depth - 1)).array);
+		return ret;
 	}
 }
