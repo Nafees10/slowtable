@@ -1,7 +1,6 @@
 import std.stdio,
 			 std.conv,
 			 std.math,
-			 std.json,
 			 std.array,
 			 std.string,
 			 std.typecons,
@@ -17,6 +16,21 @@ import common;
 void main(string[] args){
 	File input = stdin;//File("tt");
 	ClassMap map = new ClassMap();
+	if (args.canFind("--help") || args.canFind("-h")){
+		writefln!"Usage:\n\t%s [maxCombinations]"(args[0]);
+		exit(0);
+	}
+
+	size_t maxC = 200;
+	if (args.length > 1){
+		try{
+			maxC = args[1].to!size_t;
+		} catch (Exception e){
+			stderr.writefln!"Expected integer for maxCombinations, found `%s`"(maxC);
+			exit(1);
+		}
+	}
+
 	while (!input.eof){
 		Timetable tt = Timetable.parse(input.byLineCopy);
 		if (tt.classes is null)
@@ -24,32 +38,16 @@ void main(string[] args){
 		map.reset();
 		map.build(tt.classes);
 
-		if (args.canFind("--debug")){
-			foreach (size_t sid; 0 .. map.sidCount){
-				stderr.writefln!"%d: %s-%s"(sid, map.names[sid].expand);
+		size_t count = 0;
+		foreach (TreeNode node; Combinator(new TreeNode(null, map))){
+			writefln!"%s combination %d"(tt.name, count);
+			foreach (size_t sid; node.picks.keys){
+				foreach (Class c; node.map.sessions[sid])
+					c.serialize.writeln();
 			}
-
-			foreach (size_t sidA; 0 .. map.names.length){
-				stderr.writefln!"Clashes for %d: %s-%s:"(sidA, map.names[sidA].expand);
-				foreach (size_t sidB; 0 .. map.names.length){
-					if (map.clashMatrix[sidA][sidB] == false)
-						stderr.writefln!"\t%d: %s-%s"(sidB, map.names[sidB].expand);
-				}
-			}
-		}
-
-		if (args.canFind("--json")){
-			size_t count = 50; (new TreeNode(null, map)).jsonOf(count).toPrettyString.writeln;
-		} else {
-			size_t count = 0;
-			foreach (TreeNode node; Combinator(new TreeNode(null, map))){
-				writefln!"%s combination %d"(tt.name, count ++);
-				foreach (size_t sid; node.picks.keys){
-					foreach (Class c; node.map.sessions[sid])
-						c.serialize.writeln();
-				}
-				writefln!"over";
-			}
+			writefln!"over";
+			if (++count >= maxC)
+				break;
 		}
 	}
 }
@@ -250,28 +248,6 @@ public:
 		foreach (size_t sid; SidIterator(map, nextCid, clash))
 			_heap.put(new TreeNode(this, map, sid));
 		return _heap;
-	}
-
-	/// Returns: this as a json. Will result in a recursive `next()` call
-	JSONValue jsonOf(ref size_t count){
-		JSONValue ret;
-		ret["mt"] = JSONValue(mt);
-		ret["dc"] = JSONValue(dc);
-		ret["dv"] = JSONValue(dv);
-		ret["score"] = JSONValue(score);
-		ret["picks"] = JSONValue(
-				picks.keys
-				.map!(p => "%d (%s-%s)".format(p, map.names[p].expand))
-				.array
-				);
-		ret["cid"] = JSONValue(cid);
-		if (count == size_t.max)
-			ret["next"] = JSONValue(next.map!(a => a.jsonOf(count)).array);
-		else if (count){
-			count --;
-			ret["next"] = JSONValue(next.map!(a => a.jsonOf(count)).array);
-		}
-		return ret;
 	}
 }
 
