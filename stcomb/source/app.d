@@ -15,20 +15,6 @@ import utils.ds;
 import common;
 
 void main(string[] args){
-	if (args.canFind("-h") || args.canFind("--help")){
-		writeln("Usage:\n\t", args[0], " consistencyWeight daysWeight gapsWeight");
-		writeln("Weights are all integer, and by default, 1");
-		exit(1);
-	}
-	uint[3] weights = 1;
-	foreach (i, arg; args[1 .. $]){
-		try{
-			weights[i] = arg.to!uint;
-		} catch (Exception e){
-			stderr.writefln!"`%s` is not a valid weight"(arg);
-		}
-	}
-
 	File input = stdin;//File("tt");
 	ClassMap map = new ClassMap();
 	while (!input.eof){
@@ -38,15 +24,21 @@ void main(string[] args){
 		map.reset();
 		map.build(tt.classes);
 
-		foreach (size_t sidA; 0 .. map.names.length){
-			stderr.writefln!"Clashes for %d: %s-%s:"(sidA, map.names[sidA].expand);
-			foreach (size_t sidB; 0 .. map.names.length){
-				if (map.clashMatrix[sidA][sidB] == false)
-					stderr.writefln!"\t%d: %s-%s"(sidB, map.names[sidB].expand);
+		if (args.canFind("--debug")){
+			foreach (size_t sid; 0 .. map.sidCount){
+				stderr.writefln!"%d: %s-%s"(sid, map.names[sid].expand);
+			}
+
+			foreach (size_t sidA; 0 .. map.names.length){
+				stderr.writefln!"Clashes for %d: %s-%s:"(sidA, map.names[sidA].expand);
+				foreach (size_t sidB; 0 .. map.names.length){
+					if (map.clashMatrix[sidA][sidB] == false)
+						stderr.writefln!"\t%d: %s-%s"(sidB, map.names[sidB].expand);
+				}
 			}
 		}
 
-		if (args.canFind("json")){
+		if (args.canFind("--json")){
 			size_t count = 50; (new TreeNode(null, map)).jsonOf(count).toPrettyString.writeln;
 		} else {
 			size_t count = 0;
@@ -68,10 +60,13 @@ public:
 	/// maps sid to set of clashing CourseSection(s)
 	BitArray[] clashMatrix;
 
+	/// number of section ids
+	size_t sidCount;
 	/// maps names to sids
 	size_t[Tuple!(string, string)] sids;
-	/// maps course name to [sid_start, sid_count]
-	Tuple!(size_t, size_t)[string] courseSids;
+	/// maps sids to sids range for its course (start, count)
+	/// picks range. i.e (start, count) for sids of same course
+	Tuple!(size_t, size_t)[] cidsRange;
 
 	/// maps sid to [courseName, sectionName]
 	Tuple!(string, string)[] names;
@@ -91,9 +86,10 @@ public:
 
 	/// Resets this object
 	void reset() {
+		sidCount = 0;
 		clashMatrix = null;
 		sids = null;
-		courseSids = null;
+		cidsRange = null;
 		names = null;
 		sessions = null;
 	}
@@ -102,7 +98,6 @@ public:
 	/// **Be sure to call `reset` on this before if not newly constructed**
 	void build(Class[] tt) {
 		// separate into courses and sections
-		size_t sidCount;
 		Class[][string][string] categ;
 		foreach (Class c; tt){
 			if (c.name !in categ)
@@ -114,12 +109,14 @@ public:
 			categ[c.name][c.section] ~= c;
 		}
 
-		// build sids, courseSids, names, and sessions
+		// build sids, sidsRange, names, and sessions
 		sessions.length = sidCount;
 		names.length = sidCount;
+		cidsRange.length = categ.keys.length;
 		size_t sidNext;
+		size_t courseI;
 		foreach (string course, Class[][string] sections; categ){
-			courseSids[course] = tuple(sidNext, sections.length);
+			cidsRange[courseI ++] = tuple(sidNext, sections.keys.length);
 			foreach (string section, Class[] classes; sections){
 				sids[tuple(course, section)] = sidNext;
 				names[sidNext] = tuple(course, section);
@@ -153,22 +150,22 @@ public:
 
 /// An iterator for sids, while excluding certain sids
 struct SidIterator{
-	private Tuple!(size_t, size_t)[] skip;
 	private const BitArray clash;
-	private size_t curr = size_t.max;
+	private size_t curr;
 	private size_t len;
 
 	@disable this();
-	this(const ClassMap map, const ref Set!size_t picks,
-			const BitArray clash) {
+	this(const ClassMap map, size_t cid = 0,
+			const BitArray clash = BitArray.init) {
 		this.clash = clash;
-		Heap!(Tuple!(size_t, size_t), "a[0] < b[0]") heap;
-		heap = new typeof(heap);
-		foreach (size_t sid; picks.keys)
-			heap.put(map.courseSids[map.names[sid][0]]);
-		skip = heap.array;
 		curr = size_t.max;
-		len = map.names.length;
+		Tuple!(size_t, size_t) range = map.cidsRange[cid];
+		curr = range[0];
+		len = curr + range[1];
+		if (curr == 0)
+			curr = size_t.max;
+		else
+			curr --;
 		popFront();
 	}
 
@@ -183,18 +180,8 @@ struct SidIterator{
 	void popFront() {
 		curr = curr == size_t.max ? 0 : curr + 1;
 		if (empty) return;
-		while (true){
-			if (skip.length && curr == skip[0][0]){
-				curr += skip[0][1];
-				skip = skip[1 .. $];
-				continue;
-			}
-			if (curr < clash.length && clash[curr] == false){
-				curr ++;
-				continue;
-			}
-			return;
-		}
+		while (curr < len && clash[curr] == false)
+			curr ++;
 	}
 }
 
@@ -209,6 +196,7 @@ public:
 	float dv = 0; /// sum of deviations from mean
 	float score = 0; /// score used to determine how good this combination is
 	Set!size_t picks; /// picked sids
+	size_t cid; /// course id
 	BitArray clash; /// clashes bit array
 
 	this(const TreeNode parent, const ClassMap map, size_t pick = size_t.max) {
@@ -217,11 +205,11 @@ public:
 			picks.put(parent.picks.keys);
 			mt[] = parent.mt;
 			dc[] = parent.dc;
-			/*mt = parent.mt.dup;
-			dc = parent.dc.dup;*/
 			dv = parent.dv;
 			clash = parent.clash.dup;
+			cid = parent.cid == size_t.max ? 0 : parent.cid + 1;
 		} else {
+			cid = size_t.max;
 			clash = BitArray(
 					new void[(map.names.length + (size_t.sizeof - 1)) / size_t.sizeof],
 					map.names.length);
@@ -256,9 +244,11 @@ public:
 		if (_heap)
 			return _heap;
 		_heap = new typeof(_heap);
-		foreach (size_t sid; SidIterator(map, picks, clash)){
+		size_t nextCid = cid == size_t.max ? 0 : cid + 1;
+		if (nextCid >= map.cidsRange.length)
+			return _heap;
+		foreach (size_t sid; SidIterator(map, nextCid, clash))
 			_heap.put(new TreeNode(this, map, sid));
-		}
 		return _heap;
 	}
 
@@ -274,6 +264,7 @@ public:
 				.map!(p => "%d (%s-%s)".format(p, map.names[p].expand))
 				.array
 				);
+		ret["cid"] = JSONValue(cid);
 		if (count == size_t.max)
 			ret["next"] = JSONValue(next.map!(a => a.jsonOf(count)).array);
 		else if (count){
@@ -299,7 +290,7 @@ struct Combinator{
 		frontier.popFront;
 		while (!frontier.empty){
 			TreeNode node = frontier.front;
-			if (node.picks.keys.length == node.map.courseSids.length)
+			if (node.picks.keys.length == node.map.cidsRange.length)
 				return;
 			frontier.popFront;
 			foreach (TreeNode next; node.next)
