@@ -36,7 +36,7 @@ void main(string[] args){
 		ClassMap map = new ClassMap(tt);
 		immutable size_t courseCount = map.courseSids.length;
 		TreeNode node = new TreeNode(null, map);
-		node.jsonOf(5).toPrettyString.writeln;
+		node.jsonOf().toPrettyString.writeln;
 	}
 }
 
@@ -116,9 +116,10 @@ public:
 				immutable size_t sidB = sids[tuple(b.name, b.section)];
 				clashMatrix[sidA][sidB] = !a.overlaps(b);
 			}
-			// sid never clashes with itself
-			clashMatrix[sidA][sidA] = true;
 		}
+		// sid always clashes with itself
+		foreach (size_t sid; 0 .. sidCount)
+			clashMatrix[sid][sid] = false;
 	}
 
 	/// Returns: whether a pair of sections clash
@@ -130,14 +131,14 @@ public:
 /// An iterator for sids, while excluding certain sids
 struct SidIterator{
 	private Tuple!(size_t, size_t)[] skip;
+	private const BitArray clash;
 	private size_t curr = 0;
 	private size_t len;
 	@disable this();
-	@property bool empty() pure const {
-		return curr >= len;
-	}
 	/// `exclude` is sids to exclude
-	this(const ClassMap map, const ref Set!size_t exclude) pure {
+	this(const ClassMap map, const ref Set!size_t exclude,
+			const BitArray clash) pure {
+		this.clash = clash;
 		Heap!(Tuple!(size_t, size_t), "a[0] < b[0]") heap;
 		heap = new typeof(heap);
 		foreach (sid; exclude.keys)
@@ -148,6 +149,10 @@ struct SidIterator{
 		popFront();
 	}
 
+	@property bool empty() pure const {
+		return curr >= len;
+	}
+
 	size_t front() pure const {
 		return curr;
 	}
@@ -155,11 +160,17 @@ struct SidIterator{
 	void popFront() pure {
 		if (empty) return;
 		curr ++;
-		while (skip.length){
-			if (curr != skip[0][0])
-				return;
-			curr += skip[0][1];
-			skip = skip[1 .. $];
+		while (true){
+			if (skip.length && curr == skip[0][0]){
+				curr += skip[0][1];
+				skip = skip[1 .. $];
+				continue;
+			}
+			if (curr < clash.length && clash[curr] == false){
+				curr ++;
+				continue;
+			}
+			return;
 		}
 	}
 }
@@ -172,19 +183,28 @@ public:
 	size_t[7] dc = 0; /// session counts for each day
 	float dv = 0; /// sum of deviations from mean
 	Set!size_t picks; /// picked sids
+	BitArray clash; /// clashes bit array
 
 	this(const TreeNode parent, const ClassMap map,
 			size_t pick = size_t.max) pure {
 		this.map = map;
 		if (parent){
 			picks = Set!size_t(parent.picks.keys);
-			mt = parent.mt;
+			mt = parent.mt.dup;
+			dc = parent.dc.dup;
 			dv = parent.dv;
+			clash = parent.clash.dup;
+		} else {
+			clash = BitArray(
+					new void[(map.names.length + (size_t.sizeof - 1)) / size_t.sizeof],
+					map.names.length);
+			clash[] = true;
 		}
 		if (pick == size_t.max)
 			return;
+		clash &= map.clashMatrix[pick];
 		picks.put(pick);
-		// update dc
+		// update mt and dc
 		foreach (Class c; map.sessions[pick]){
 			immutable size_t time =
 				c.time.second + 60 * (c.time.minute + (60 * c.time.hour));
@@ -203,7 +223,7 @@ public:
 	Heap!(TreeNode, "a.dv < b.dv") next() pure const {
 		Heap!(TreeNode, "a.dv < b.dv") heap;
 		heap = new typeof(heap);
-		foreach (size_t sid; SidIterator(map, picks))
+		foreach (size_t sid; SidIterator(map, picks, clash))
 			heap.put(new TreeNode(this, map, sid));
 		return heap;
 	}
@@ -226,4 +246,9 @@ public:
 			ret["next"] = JSONValue(next.map!(a => a.jsonOf(depth - 1)).array);
 		return ret;
 	}
+}
+
+/// Iterates TreeNode's inorder
+struct Inorder{
+
 }
