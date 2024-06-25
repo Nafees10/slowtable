@@ -27,6 +27,7 @@ Run the following to clone and build:
 git clone https://github.com/Nafees10/slowtable
 cd slowtable
 dub build :stparse -b=release # for the slowtable ODS parser
+dub build :stdelab -b=release # rename labs to courses. specific to FAST NUCES
 dub build :stfilter -b=release # slowtable timetable filter
 dub build :sthtml -b=release # slowtable timetable to html for graphical view
 dub build :stcomb -b=release # combinator to generate timetable combinations
@@ -68,6 +69,18 @@ Fall2023.ods[0]
 	operations research	BSE-5B	CS-5	fri	113000	80
 	...
 over
+```
+
+## `stdelab`
+
+Renames labs to courses. Useful when output of `stparse` is going to `stcomb`,
+pass it through `stdelab` so stcomb sees labs as same as course, generating
+same sections for both.
+
+Example:
+
+```bash
+stparse tt.ods 0 10 | stdelab > tt
 ```
 
 ## `stfilter`
@@ -168,13 +181,7 @@ cat BSE-5 | sthtml > BSE-5.html
 ## `stcomb`
 
 Takes input timetables, and outputs all possible non-clashing combinations,
-sorted according to ratings. The ratings are based on:
-
-* Inter-day consistency
-* Number of days
-* Gaps between classes
-
-Weights to each of these ratings can be provided. See `stcomb --help`.
+sorted from best to worst.
 
 Example:
 
