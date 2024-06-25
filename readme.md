@@ -183,6 +183,8 @@ cat BSE-5 | sthtml > BSE-5.html
 Takes input timetables, and outputs all possible non-clashing combinations,
 sorted from best to worst.
 
+It takes one optional argument: maximum number of combinations to generate.
+
 Example:
 
 ```bash
