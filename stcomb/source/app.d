@@ -34,9 +34,13 @@ void main(string[] args){
 		if (tt.classes is null)
 			continue;
 		ClassMap map = new ClassMap(tt);
-		immutable size_t courseCount = map.courseSids.length;
-		TreeNode node = new TreeNode(null, map);
-		node.jsonOf().toPrettyString.writeln;
+
+		/*Set!size_t picks;
+		picks.put(0);
+		foreach (size_t sid; SidIterator(map, picks, map.clashMatrix[0]))
+			stderr.writefln!"\t%d"(sid);*/
+
+		print((new TreeNode(null, map)).next.array, tt.name);
 	}
 }
 
@@ -57,16 +61,16 @@ public:
 	Class[][] sessions;
 
 	/// constructor
-	this(Timetable tt) pure {
+	this(Timetable tt) /*pure*/ {
 		build(tt.classes);
 	}
 	/// ditto
-	this (Class[] tt) pure {
+	this (Class[] tt) /*pure*/ {
 		build(tt);
 	}
 
 	/// Resets this object
-	void reset() pure {
+	void reset() /*pure*/ {
 		clashMatrix = null;
 		sids = null;
 		courseSids = null;
@@ -76,7 +80,7 @@ public:
 
 	/// Builds this object from Class[].
 	/// **Be sure to call `reset` on this before if not newly constructed**
-	void build(Class[] tt) pure {
+	void build(Class[] tt) /*pure*/ {
 		// separate into courses and sections
 		size_t sidCount;
 		Class[][string][string] categ;
@@ -123,7 +127,7 @@ public:
 	}
 
 	/// Returns: whether a pair of sections clash
-	bool clashes(size_t a, size_t b) pure const {
+	bool clashes(size_t a, size_t b) /*pure*/ const {
 		return clashMatrix[a][b] == false;
 	}
 }
@@ -132,34 +136,34 @@ public:
 struct SidIterator{
 	private Tuple!(size_t, size_t)[] skip;
 	private const BitArray clash;
-	private size_t curr = 0;
+	private size_t curr = size_t.max;
 	private size_t len;
+
 	@disable this();
-	/// `exclude` is sids to exclude
-	this(const ClassMap map, const ref Set!size_t exclude,
-			const BitArray clash) pure {
+	this(const ClassMap map, const ref Set!size_t picks,
+			const BitArray clash) /*pure*/ {
 		this.clash = clash;
 		Heap!(Tuple!(size_t, size_t), "a[0] < b[0]") heap;
 		heap = new typeof(heap);
-		foreach (sid; exclude.keys)
+		foreach (size_t sid; picks.keys)
 			heap.put(map.courseSids[map.names[sid][0]]);
 		skip = heap.array;
-		curr = 0;
+		curr = size_t.max;
 		len = map.names.length;
 		popFront();
 	}
 
-	@property bool empty() pure const {
+	@property bool empty() /*pure*/ const {
 		return curr >= len;
 	}
 
-	size_t front() pure const {
+	size_t front() /*pure*/ const {
 		return curr;
 	}
 
-	void popFront() pure {
+	void popFront() /*pure*/ {
+		curr = curr == size_t.max ? 0 : curr + 1;
 		if (empty) return;
-		curr ++;
 		while (true){
 			if (skip.length && curr == skip[0][0]){
 				curr += skip[0][1];
@@ -177,6 +181,8 @@ struct SidIterator{
 
 /// A Node in the combinations tree
 final class TreeNode{
+private:
+	Heap!(TreeNode, "a.dv < b.dv") _heap;
 public:
 	const ClassMap map;
 	float[7] mt = 0; /// mean times for each day
@@ -186,10 +192,10 @@ public:
 	BitArray clash; /// clashes bit array
 
 	this(const TreeNode parent, const ClassMap map,
-			size_t pick = size_t.max) pure {
+			size_t pick = size_t.max) /*pure*/ {
 		this.map = map;
 		if (parent){
-			picks = Set!size_t(parent.picks.keys);
+			picks.put(parent.picks.keys);
 			mt = parent.mt.dup;
 			dc = parent.dc.dup;
 			dv = parent.dv;
@@ -204,6 +210,7 @@ public:
 			return;
 		clash &= map.clashMatrix[pick];
 		picks.put(pick);
+
 		// update mt and dc
 		foreach (Class c; map.sessions[pick]){
 			immutable size_t time =
@@ -219,17 +226,19 @@ public:
 		}
 	}
 
-	/// Returns: next nodes after this
-	Heap!(TreeNode, "a.dv < b.dv") next() pure const {
-		Heap!(TreeNode, "a.dv < b.dv") heap;
-		heap = new typeof(heap);
-		foreach (size_t sid; SidIterator(map, picks, clash))
-			heap.put(new TreeNode(this, map, sid));
-		return heap;
+	/// Returns: range of next nodes after this
+	Heap!(TreeNode, "a.dv < b.dv") next() /*pure*/ {
+		if (_heap)
+			return _heap;
+		_heap = new typeof(_heap);
+		foreach (size_t sid; SidIterator(map, picks, clash)){
+			_heap.put(new TreeNode(this, map, sid));
+		}
+		return _heap;
 	}
 
 	/// Returns: this as a json. Will result in a recursive `next()` call
-	JSONValue jsonOf(size_t depth = size_t.max) pure const {
+	JSONValue jsonOf(size_t depth = size_t.max) /*pure*/ {
 		JSONValue ret;
 		//ret["mt"] = JSONValue(mt);
 		//ret["dc"] = JSONValue(dc);
@@ -248,7 +257,27 @@ public:
 	}
 }
 
-/// Iterates TreeNode's inorder
-struct Inorder{
+void print(TreeNode[] nodes, string name){
+	size_t count = 0;
+	void print(TreeNode node){
+		if (node.picks.keys.length == node.map.courseSids.length){
+			writefln!"%s combination %d"(name, count ++);
+			foreach (size_t sid; node.picks.keys){
+				foreach (Class c; node.map.sessions[sid])
+					c.serialize.writeln();
+			}
+			writefln!"over";
+			/*if (count >= 200){
+				stdout.flush; exit(0);
+			}*/
+			return;
+		}
 
+		foreach (next; node.next)
+			print(next);
+	}
+
+	foreach (i, node; nodes){
+		print(node);
+	}
 }
