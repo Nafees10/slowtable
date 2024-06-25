@@ -14,8 +14,8 @@ FAST NUCES Lahore.
 
 ## Prerequisites
 
-1. Libreoffice - convert `xlsx` to `ods`, since `slowparser` only accepts `ods`
-1. A D compiler, and `dub` - both can be downloaded from
+1. Libreoffice - convert `xlsx` to `ods`, since `stparse` only accepts `ods`
+1. A D compiler (`ldc`), and `dub` - both can be downloaded from
 [here](https://dlang.org/download.html#dmd)
 1. `git` - to clone repo, or you can download the code from github
 
@@ -26,17 +26,15 @@ Run the following to clone and build:
 ```bash
 git clone https://github.com/Nafees10/slowtable
 cd slowtable
-dub build :stparse -b=release # for the slowtable ODS parser
-dub build :stdelab -b=release # rename labs to courses. specific to FAST NUCES
-dub build :stfilter -b=release # slowtable timetable filter
-dub build :sthtml -b=release # slowtable timetable to html for graphical view
-dub build :stcomb -b=release # combinator to generate timetable combinations
+./build.sh
+./link.sh
 ```
 
 This will create executables in the `bin` folder.
 
-Run the `./link.sh` script to create symlinks in `~/.local/bin/`, making the
-binaries runnable without needing to `cd` into `slowtable/bin/`.
+The `./link.sh` script will create symlinks in `~/.local/bin/`, making the
+binaries runnable without needing to `cd` into `slowtable/bin/`, if you have
+`~/.local/bin/` in your `$PATH`.
 
 ---
 
