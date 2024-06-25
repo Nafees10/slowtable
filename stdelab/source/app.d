@@ -21,6 +21,7 @@ void main(){
 			}
 			if (c.name.length >= 3 && c.name[$ - 3 .. $] == "lab"){
 				c.name.length -= 3;
+				c.name = c.name.clean;
 				ptrdiff_t index = c.section.indexOf(",");
 				if (index > 0)
 					c.section = c.section[0 .. index];
