@@ -29,18 +29,36 @@ void main(string[] args){
 		}
 	}
 
-	while (!stdin.eof){
-		Timetable tt = Timetable.parse(stdin.byLineCopy);
+	File input = stdin;//File("tt");
+	ClassMap map = new ClassMap();
+	while (!input.eof){
+		Timetable tt = Timetable.parse(input.byLineCopy);
 		if (tt.classes is null)
 			continue;
-		ClassMap map = new ClassMap(tt);
+		map.reset();
+		map.build(tt.classes);
 
-		/*Set!size_t picks;
-		picks.put(0);
-		foreach (size_t sid; SidIterator(map, picks, map.clashMatrix[0]))
-			stderr.writefln!"\t%d"(sid);*/
+		foreach (size_t sidA; 0 .. map.names.length){
+			stderr.writefln!"Clashes for %d: %s-%s:"(sidA, map.names[sidA].expand);
+			foreach (size_t sidB; 0 .. map.names.length){
+				if (map.clashMatrix[sidA][sidB] == false)
+					stderr.writefln!"\t%d: %s-%s"(sidB, map.names[sidB].expand);
+			}
+		}
 
-		print((new TreeNode(null, map)).next.array, tt.name);
+		if (args.canFind("json")){
+			size_t count = 50; (new TreeNode(null, map)).jsonOf(count).toPrettyString.writeln;
+		} else {
+			size_t count = 0;
+			foreach (TreeNode node; Combinator(new TreeNode(null, map))){
+				writefln!"%s combination %d"(tt.name, count ++);
+				foreach (size_t sid; node.picks.keys){
+					foreach (Class c; node.map.sessions[sid])
+						c.serialize.writeln();
+				}
+				writefln!"over";
+			}
+		}
 	}
 }
 
@@ -61,16 +79,18 @@ public:
 	Class[][] sessions;
 
 	/// constructor
-	this(Timetable tt) /*pure*/ {
+	this(Timetable tt) {
 		build(tt.classes);
 	}
 	/// ditto
-	this (Class[] tt) /*pure*/ {
+	this (Class[] tt) {
 		build(tt);
 	}
+	/// ditto
+	this(){}
 
 	/// Resets this object
-	void reset() /*pure*/ {
+	void reset() {
 		clashMatrix = null;
 		sids = null;
 		courseSids = null;
@@ -80,7 +100,7 @@ public:
 
 	/// Builds this object from Class[].
 	/// **Be sure to call `reset` on this before if not newly constructed**
-	void build(Class[] tt) /*pure*/ {
+	void build(Class[] tt) {
 		// separate into courses and sections
 		size_t sidCount;
 		Class[][string][string] categ;
@@ -109,26 +129,25 @@ public:
 		}
 		assert (sidNext == sidCount);
 
-		/// build clashMatrix
 		clashMatrix.length = sidCount;
-		foreach (Class a; tt){
-			immutable size_t sidA = sids[tuple(a.name, a.section)];
-			clashMatrix[sidA] = BitArray(
+		foreach (size_t sid; 0 .. sidCount){
+			clashMatrix[sid] = BitArray(
 					new void[(sidCount + (size_t.sizeof - 1)) / size_t.sizeof],
 					sidCount);
+			clashMatrix[sid][] = true;
+		}
+
+		/// build clashMatrix
+		foreach (Class a; tt){
+			immutable size_t sidA = sids[tuple(a.name, a.section)];
 			foreach (Class b; tt){
 				immutable size_t sidB = sids[tuple(b.name, b.section)];
-				clashMatrix[sidA][sidB] = !a.overlaps(b);
+				clashMatrix[sidA][sidB] = clashMatrix[sidA][sidB] && !a.overlaps(b);
 			}
 		}
 		// sid always clashes with itself
 		foreach (size_t sid; 0 .. sidCount)
 			clashMatrix[sid][sid] = false;
-	}
-
-	/// Returns: whether a pair of sections clash
-	bool clashes(size_t a, size_t b) /*pure*/ const {
-		return clashMatrix[a][b] == false;
 	}
 }
 
@@ -141,7 +160,7 @@ struct SidIterator{
 
 	@disable this();
 	this(const ClassMap map, const ref Set!size_t picks,
-			const BitArray clash) /*pure*/ {
+			const BitArray clash) {
 		this.clash = clash;
 		Heap!(Tuple!(size_t, size_t), "a[0] < b[0]") heap;
 		heap = new typeof(heap);
@@ -153,15 +172,15 @@ struct SidIterator{
 		popFront();
 	}
 
-	@property bool empty() /*pure*/ const {
+	@property bool empty() const {
 		return curr >= len;
 	}
 
-	size_t front() /*pure*/ const {
+	size_t front() const {
 		return curr;
 	}
 
-	void popFront() /*pure*/ {
+	void popFront() {
 		curr = curr == size_t.max ? 0 : curr + 1;
 		if (empty) return;
 		while (true){
@@ -182,22 +201,24 @@ struct SidIterator{
 /// A Node in the combinations tree
 final class TreeNode{
 private:
-	Heap!(TreeNode, "a.dv < b.dv") _heap;
+	Heap!(TreeNode, "a.score < b.score") _heap;
 public:
 	const ClassMap map;
 	float[7] mt = 0; /// mean times for each day
 	size_t[7] dc = 0; /// session counts for each day
 	float dv = 0; /// sum of deviations from mean
+	float score = 0; /// score used to determine how good this combination is
 	Set!size_t picks; /// picked sids
 	BitArray clash; /// clashes bit array
 
-	this(const TreeNode parent, const ClassMap map,
-			size_t pick = size_t.max) /*pure*/ {
+	this(const TreeNode parent, const ClassMap map, size_t pick = size_t.max) {
 		this.map = map;
 		if (parent){
 			picks.put(parent.picks.keys);
-			mt = parent.mt.dup;
-			dc = parent.dc.dup;
+			mt[] = parent.mt;
+			dc[] = parent.dc;
+			/*mt = parent.mt.dup;
+			dc = parent.dc.dup;*/
 			dv = parent.dv;
 			clash = parent.clash.dup;
 		} else {
@@ -224,10 +245,14 @@ public:
 				c.time.second + 60 * (c.time.minute + (60 * c.time.hour));
 			dv += abs(mt[c.day] - time);
 		}
+		// count days, score = n(days) * dv
+		immutable size_t days = (cast(size_t[])dc).map!(d => cast(ubyte)(d != 0)).sum;
+		if (days)
+			score = dv * days + (days << 16);
 	}
 
 	/// Returns: range of next nodes after this
-	Heap!(TreeNode, "a.dv < b.dv") next() /*pure*/ {
+	Heap!(TreeNode, "a.score < b.score") next() {
 		if (_heap)
 			return _heap;
 		_heap = new typeof(_heap);
@@ -238,46 +263,55 @@ public:
 	}
 
 	/// Returns: this as a json. Will result in a recursive `next()` call
-	JSONValue jsonOf(size_t depth = size_t.max) /*pure*/ {
+	JSONValue jsonOf(ref size_t count){
 		JSONValue ret;
-		//ret["mt"] = JSONValue(mt);
-		//ret["dc"] = JSONValue(dc);
+		ret["mt"] = JSONValue(mt);
+		ret["dc"] = JSONValue(dc);
 		ret["dv"] = JSONValue(dv);
+		ret["score"] = JSONValue(score);
 		ret["picks"] = JSONValue(
 				picks.keys
-				.map!(p => map.names[p])
-				.map!(p => p[0] ~ p[1])
+				.map!(p => "%d (%s-%s)".format(p, map.names[p].expand))
 				.array
 				);
-		if (depth == size_t.max)
-			ret["next"] = JSONValue(next.map!(a => a.jsonOf).array);
-		else if (depth)
-			ret["next"] = JSONValue(next.map!(a => a.jsonOf(depth - 1)).array);
+		if (count == size_t.max)
+			ret["next"] = JSONValue(next.map!(a => a.jsonOf(count)).array);
+		else if (count){
+			count --;
+			ret["next"] = JSONValue(next.map!(a => a.jsonOf(count)).array);
+		}
 		return ret;
 	}
 }
 
-void print(TreeNode[] nodes, string name){
-	size_t count = 0;
-	void print(TreeNode node){
-		if (node.picks.keys.length == node.map.courseSids.length){
-			writefln!"%s combination %d"(name, count ++);
-			foreach (size_t sid; node.picks.keys){
-				foreach (Class c; node.map.sessions[sid])
-					c.serialize.writeln();
-			}
-			writefln!"over";
-			/*if (count >= 200){
-				stdout.flush; exit(0);
-			}*/
-			return;
-		}
+struct Combinator{
+	private Heap!(TreeNode, "a.score < b.score") frontier;
+	@disable this();
 
-		foreach (next; node.next)
-			print(next);
+	this(TreeNode root){
+		frontier = new typeof(frontier);
+		frontier.put(root);
+		frontier.put(root);
+		popFront;
 	}
 
-	foreach (i, node; nodes){
-		print(node);
+	@property void popFront(){
+		frontier.popFront;
+		while (!frontier.empty){
+			TreeNode node = frontier.front;
+			if (node.picks.keys.length == node.map.courseSids.length)
+				return;
+			frontier.popFront;
+			foreach (TreeNode next; node.next)
+				frontier.put(next);
+		}
+	}
+
+	@property TreeNode front(){
+		return frontier.front;
+	}
+
+	@property bool empty(){
+		return frontier.heap.length == 0;
 	}
 }
