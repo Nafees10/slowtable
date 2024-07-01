@@ -40,7 +40,7 @@ struct Class{
 	/// Deserialize from a tab separated line
 	/// Throws: Exception when invalid format
 	/// Returns: deserialized Class
-	static Class deserialize(string line){
+	static Class deserialize(string line) pure {
 		string[] vals = line.split("\t");
 		if (vals.length && vals[0].length == 0)
 			vals = vals[1 .. $];
@@ -63,7 +63,7 @@ struct Class{
 	/// encode's time for comparison, for a Class
 	///
 	/// Returns: encoded time
-	@property uint timeEncode() const {
+	@property uint timeEncode() pure const {
 		uint ret;
 		ret = day << 20;
 		ret |= (dur!"hours"(time.hour) + dur!"minutes"(time.minute) +
@@ -72,7 +72,7 @@ struct Class{
 	}
 
 	this (DayOfWeek day, TimeOfDay time, Duration duration, string name,
-			string section, string venue){
+			string section, string venue) pure {
 		this.day = day;
 		this.time = time;
 		this.duration = duration;
@@ -147,7 +147,7 @@ void sortByTime(ref Class[] classes){
 }
 
 /// Sorts classes by venue and day
-Class[][string][DayOfWeek] sortByVenueDay(Class[] classes){
+Class[][string][DayOfWeek] sortByVenueDay(Class[] classes) pure {
 	Class[][string][DayOfWeek] ret;
 	foreach (c; classes)
 		ret[c.day][c.venue] ~= c;
@@ -156,7 +156,7 @@ Class[][string][DayOfWeek] sortByVenueDay(Class[] classes){
 
 /// Finds earliest starting time, and latest ending time
 /// Returns: [starting time, ending time]
-TimeOfDay[2] timeMinMax(Class[] classes){
+TimeOfDay[2] timeMinMax(Class[] classes) pure {
 	TimeOfDay min = TimeOfDay.max, max = TimeOfDay.min;
 	foreach (c; classes){
 		if (c.time < min)
