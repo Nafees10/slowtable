@@ -1,4 +1,4 @@
-module parser;
+module slowtable.parser;
 
 import std.algorithm,
 			 std.regex,
@@ -6,11 +6,12 @@ import std.algorithm,
 			 std.conv,
 			 std.datetime;
 
-import ods;
+import slowtable.ods,
+			 slowtable.common;
 
 import utils.misc : isAlphabet, isNum;
 
-import common;
+
 
 private enum Offset = 2;
 

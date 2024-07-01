@@ -1,11 +1,13 @@
+module app.sthtml;
+
 import std.stdio,
 			 std.string,
 			 std.conv : to;
 
-import common,
-			 tablemaker;
+import slowtable.common,
+			 slowtable.html;
 
-void main(string[] args){
+void sthtml_main(string[] args){
 	uint interval = 10;
 	if (args.length > 2){
 		try{

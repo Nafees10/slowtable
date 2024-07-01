@@ -26,15 +26,14 @@ Run the following to clone and build:
 ```bash
 git clone https://github.com/Nafees10/slowtable
 cd slowtable
-./build.sh
+dub build -c=app
 ./link.sh
 ```
 
-This will create executables in the `bin` folder.
+This will create a multi-call binary `slowtable` in the `bin` folder.
 
-The `./link.sh` script will create symlinks in `~/.local/bin/`, making the
-binaries runnable without needing to `cd` into `slowtable/bin/`, if you have
-`~/.local/bin/` in your `$PATH`.
+The `./link.sh` script will create symlinks in `~/.local/bin/` for following
+tools:
 
 ---
 

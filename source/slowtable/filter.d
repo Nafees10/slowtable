@@ -1,8 +1,8 @@
-module classfilter;
+module slowtable.filter;
 
 import std.regex;
 
-import common;
+import slowtable.common;
 
 /// set of filters
 struct Filters{

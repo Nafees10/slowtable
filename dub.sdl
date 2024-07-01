@@ -3,10 +3,15 @@ description "timetable tools"
 authors "Nafees Hassan"
 copyright "Copyright © 2023-2024, Nafees Hassan"
 license "MIT"
-targetType "none"
-subPackage "./common"
-subPackage "./stparse"
-subPackage "./stfilter"
-subPackage "./sthtml"
-subPackage "./stdelab"
-subPackage "./stcomb"
+dependency "utils" version="~>0.8.0"
+dependency "dxml" version="~>0.3.2"
+dependency "archive" version="~>0.6.0"
+targetPath "./bin"
+targetName "slowtable"
+configuration "library" {
+	targetType "library"
+	excludedSourceFiles "source/app/*.d"
+}
+configuration "app" {
+	targetType "executable"
+}

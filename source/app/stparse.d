@@ -1,12 +1,14 @@
+module app.stparse;
+
 import std.stdio,
 			 std.path,
 			 std.datetime,
 			 std.conv : to;
 import core.stdc.stdlib;
 
-import parser, common;
+import slowtable.parser, slowtable.common;
 
-void main(string[] args){
+void stparse_main(string[] args){
 	string filename;
 	uint sheetNumber;
 	int offset;

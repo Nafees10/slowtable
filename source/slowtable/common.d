@@ -1,4 +1,4 @@
-module common;
+module slowtable.common;
 
 import std.algorithm,
 			 std.datetime,
@@ -58,6 +58,21 @@ struct Class{
 			throw new Exception("Invalid format");
 		}
 		return ret;
+	}
+
+	/// Removes `" lab"` from end of name if present, and adjusts section
+	void delab() pure {
+		if (name.length < 3 || name[$ - 3 .. $] != "lab")
+			return;
+		name.length -= 3;
+		name = name.clean;
+		ptrdiff_t index = section.indexOf(",");
+		if (index > 0)
+			section = section[0 .. index];
+		index = cast(ptrdiff_t)section.length - 1;
+		while (index > 0 && section[index .. $].isNumeric)
+			index --;
+		section = section[0 .. index + 1];
 	}
 
 	/// encode's time for comparison, for a Class

@@ -1,10 +1,12 @@
+module app.stfilter;
+
 import std.algorithm,
 			 std.string,
 			 std.array,
 			 std.stdio;
 
-import classfilter,
-			 common;
+import slowtable.filter,
+			 slowtable.common;
 
 /// CLI Options
 struct Options{
@@ -54,7 +56,7 @@ Options parse(string[] args){
 	return ret;
 }
 
-void main(string[] args){
+void stfilter_main(string[] args){
 	Options opts = args.parse();
 	Filters filters;
 	filters.sectionsRel = opts.sections;

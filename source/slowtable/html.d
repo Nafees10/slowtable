@@ -1,14 +1,14 @@
-module tablemaker;
+module slowtable.html;
 
 import std.algorithm,
 			 std.string,
 			 std.datetime,
 			 std.conv;
 
-import common;
+import slowtable.common;
 import utils.misc : readHexadecimal;
 
-struct RGB{
+private struct RGB{
 	ubyte r, g, b;
 
 	this(ubyte r, ubyte g, ubyte b) pure {
@@ -46,7 +46,7 @@ struct RGB{
 	}
 }
 
-RGB[] COLORS;
+private RGB[] COLORS;
 
 shared static this(){
 	COLORS = [
@@ -97,7 +97,7 @@ tr:nth-child(even){background-color:#f2f2f2;}
 </style>`;
 
 /// Generates a HTML table for classes
-string generateTable(Class[] classesUnsorted, uint interval){
+string generateTable(Class[] classesUnsorted, uint interval = 10){
 	TimeOfDay[2] timeExtremes = classesUnsorted.timeMinMax;
 	TimeOfDay timeMin = timeExtremes[0], timeMax = timeExtremes[1];
 	string ret;

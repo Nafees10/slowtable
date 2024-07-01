@@ -1,9 +1,11 @@
+module app.stdelab;
+
 import std.stdio,
 			 std.string;
 
-import common;
+import slowtable.common;
 
-void main(){
+void stdelab_main(string[]){
 	while (!stdin.eof){
 		string line = readln.chomp("\n");
 		if (line.length == 0) continue;

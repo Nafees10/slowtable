@@ -1,8 +1,0 @@
-name "stfilter"
-description "slowtable filter"
-authors "nafees"
-copyright "Copyright © 2023-2024, nafees"
-license "MIT"
-dependency "slowtable:common" path="../"
-targetName "stfilter"
-targetPath "../bin"
