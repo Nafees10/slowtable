@@ -4,6 +4,7 @@ import std.stdio,
 			 std.conv,
 			 std.math,
 			 std.array,
+			 std.range,
 			 std.string,
 			 std.typecons,
 			 std.bitmanip,
@@ -15,10 +16,10 @@ import utils.ds;
 
 import slowtable.common;
 
-/// Maps courses/sections to continuous integers
+/// Maps (courses,sections) to continuous integers
 final class ClassMap{
 public:
-	/// maps sid to set of clashing CourseSection(s)
+	/// Stores clash bits for each sid: `[sidA][sidB] == true` if no clash
 	BitArray[] clashMatrix;
 
 	/// number of section ids
@@ -29,24 +30,24 @@ public:
 	/// picks range. i.e (start, count) for sids of same course
 	Tuple!(size_t, size_t)[] cidsRange;
 
-	/// maps sid to [courseName, sectionName]
+	/// maps sid to (courseName, sectionName)
 	Tuple!(string, string)[] names;
 	/// maps sid to Class[], sessions of this sid
 	Class[][] sessions;
 
 	/// constructor
-	this(Timetable tt) {
+	this(Timetable tt) pure {
 		build(tt.classes);
 	}
 	/// ditto
-	this (Class[] tt) {
+	this (Class[] tt) pure {
 		build(tt);
 	}
 	/// ditto
-	this(){}
+	this() pure {}
 
 	/// Resets this object
-	void reset() {
+	void reset() pure {
 		sidCount = 0;
 		clashMatrix = null;
 		sids = null;
@@ -57,7 +58,7 @@ public:
 
 	/// Builds this object from Class[].
 	/// **Be sure to call `reset` on this before if not newly constructed**
-	void build(Class[] tt) {
+	void build(Class[] tt) pure {
 		// separate into courses and sections
 		Class[][string][string] categ;
 		foreach (Class c; tt){
@@ -109,78 +110,20 @@ public:
 	}
 }
 
-/// An iterator for sids, while excluding certain sids
-struct SidIterator{
-	private const BitArray clash;
-	private size_t curr;
-	private size_t len;
+/// Default scoring system
+/// Optimizes for:
+/// - least number of days
+/// - classes closest together
+struct ScoreDev{
+	private float[7] mt = 0; /// mean times for each day
+	private size_t[7] dc = 0; /// session counts for each day
+	private float dv = 0; /// sum of deviations from mean
+	public float score = 0; /// score used to determine how good this combination is
 
-	@disable this();
-	this(const ClassMap map, size_t cid = 0,
-			const BitArray clash = BitArray.init) {
-		this.clash = clash;
-		curr = size_t.max;
-		Tuple!(size_t, size_t) range = map.cidsRange[cid];
-		curr = range[0];
-		len = curr + range[1];
-		if (curr == 0)
-			curr = size_t.max;
-		else
-			curr --;
-		popFront();
-	}
-
-	@property bool empty() const {
-		return curr >= len;
-	}
-
-	size_t front() const {
-		return curr;
-	}
-
-	void popFront() {
-		curr = curr == size_t.max ? 0 : curr + 1;
-		if (empty) return;
-		while (curr < len && clash[curr] == false)
-			curr ++;
-	}
-}
-
-/// A Node in the combinations tree
-final class TreeNode{
-private:
-	Heap!(TreeNode, "a.score < b.score") _heap;
-public:
-	const ClassMap map;
-	float[7] mt = 0; /// mean times for each day
-	size_t[7] dc = 0; /// session counts for each day
-	float dv = 0; /// sum of deviations from mean
-	float score = 0; /// score used to determine how good this combination is
-	Set!size_t picks; /// picked sids
-	size_t cid; /// course id
-	BitArray clash; /// clashes bit array
-
-	this(const TreeNode parent, const ClassMap map, size_t pick = size_t.max) {
-		this.map = map;
-		if (parent){
-			picks.put(parent.picks.keys);
-			mt[] = parent.mt;
-			dc[] = parent.dc;
-			dv = parent.dv;
-			clash = parent.clash.dup;
-			cid = parent.cid == size_t.max ? 0 : parent.cid + 1;
-		} else {
-			cid = size_t.max;
-			clash = BitArray(
-					new void[(map.names.length + (size_t.sizeof - 1)) / size_t.sizeof],
-					map.names.length);
-			clash[] = true;
-		}
-		if (pick == size_t.max)
-			return;
-		clash &= map.clashMatrix[pick];
-		picks.put(pick);
-
+	this(const ClassMap map, const typeof(this) parent, size_t pick) {
+		mt[] = parent.mt;
+		dc[] = parent.dc;
+		dv = parent.dv;
 		// update mt and dc
 		foreach (Class c; map.sessions[pick]){
 			immutable size_t time =
@@ -195,49 +138,84 @@ public:
 			dv += abs(mt[c.day] - time);
 		}
 		// count days, score = n(days) * dv
-		immutable size_t days = (cast(size_t[])dc).map!(d => cast(ubyte)(d != 0)).sum;
+		immutable size_t days =
+			(cast(size_t[])dc).map!(d => cast(ubyte)(d != 0)).sum;
 		if (days)
 			score = dv * days + (days << 16);
 	}
+}
+
+/// A Node in the combinations tree
+final class Node(Score) if (is (Score == struct)){
+private:
+	const ClassMap _map;
+	Heap!(Node!Score, "a.score.score < b.score.score") _next;
+	const size_t[][] _sids; /// selection options
+	BitArray _clash; /// clashes bit array
+public:
+	Set!size_t picks; /// picked sids
+	Score score; /// score
+
+	this(const ClassMap map, size_t[][] sids) pure {
+		_map = map;
+		_sids = sids;
+		_clash = BitArray(
+				new void[(map.sidCount + (size_t.sizeof - 1)) / size_t.sizeof],
+				map.sidCount);
+		_clash[] = true;
+	}
+
+	this(const Node parent, size_t pick) {
+		_map = parent._map;
+		_sids = parent._sids[1 .. $];
+		_clash = parent._clash.dup;
+		_clash &= _map.clashMatrix[pick];
+		picks.put(parent.picks.keys);
+		picks.put(pick);
+		score = Score(_map, parent.score, pick);
+	}
 
 	/// Returns: range of next nodes after this
-	Heap!(TreeNode, "a.score < b.score") next() {
-		if (_heap)
-			return _heap;
-		_heap = new typeof(_heap);
-		size_t nextCid = cid == size_t.max ? 0 : cid + 1;
-		if (nextCid >= map.cidsRange.length)
-			return _heap;
-		foreach (size_t sid; SidIterator(map, nextCid, clash))
-			_heap.put(new TreeNode(this, map, sid));
-		return _heap;
+	Heap!(Node, "a.score.score < b.score.score") next() {
+		if (_next)
+			return _next;
+		_next = new typeof(_next);
+		if (_sids.length == 0 || _sids[0].length == 0)
+			return _next;
+		foreach (size_t sid; _sids[0].filter!(s => _clash[s] == true))
+			_next.put(new Node!Score(this, sid));
+		return _next;
 	}
 }
 
-struct Combinator{
-	private Heap!(TreeNode, "a.score < b.score") frontier;
+/// Range of Timetable combinations, best scoring one first
+struct Combinator(Score) if (is (Score == struct)){
+	private Heap!(Node!Score, "a.score.score < b.score.score") frontier;
+	private size_t[][] _sids;
 	@disable this();
 
-	this(TreeNode root){
+	this(const ClassMap map, size_t[][] sids){
+		Node!Score node = new Node!Score(map, sids);
+		_sids = sids;
 		frontier = new typeof(frontier);
-		frontier.put(root);
-		frontier.put(root);
-		popFront;
+		frontier.put(node);
+		frontier.put(node);
+		popFront();
 	}
 
 	@property void popFront(){
 		frontier.popFront;
 		while (!frontier.empty){
-			TreeNode node = frontier.front;
-			if (node.picks.keys.length == node.map.cidsRange.length)
+			Node!Score node = frontier.front;
+			if (node.picks.keys.length == _sids.length)
 				return;
 			frontier.popFront;
-			foreach (TreeNode next; node.next)
+			foreach (Node!Score next; node.next)
 				frontier.put(next);
 		}
 	}
 
-	@property TreeNode front(){
+	@property Node!Score front(){
 		return frontier.front;
 	}
 

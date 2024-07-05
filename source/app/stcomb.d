@@ -1,13 +1,14 @@
 module app.stcomb;
 
 import std.stdio,
+			 std.range,
 			 std.conv,
 			 std.algorithm;
 import core.stdc.stdlib : exit;
 import utils.ds, utils.misc;
 import slowtable.combinator, slowtable.common;
 
-alias TreeNode = slowtable.combinator.TreeNode;
+alias Node = slowtable.combinator.Node;
 
 void stcomb_main(string[] args){
 	File input = stdin;//File("tt");
@@ -35,10 +36,12 @@ void stcomb_main(string[] args){
 		map.build(tt.classes);
 
 		size_t count = 0;
-		foreach (TreeNode node; Combinator(new TreeNode(null, map))){
+		size_t[][] sids = map.cidsRange
+			.map!(s => iota(s[0], s[0] + s[1]).array).array;
+		foreach (Node!ScoreDev node; Combinator!ScoreDev(map, sids)){
 			writefln!"%s combination %d"(tt.name, count);
 			foreach (size_t sid; node.picks.keys){
-				foreach (Class c; node.map.sessions[sid])
+				foreach (Class c; map.sessions[sid])
 					c.serialize.writeln();
 			}
 			writefln!"over";
