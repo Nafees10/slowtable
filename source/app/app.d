@@ -1,6 +1,7 @@
 module app.app;
 
-import std.stdio;
+import std.stdio,
+			 std.path;
 
 import app.stcomb,
 			 app.stfilter,
@@ -9,7 +10,8 @@ import app.stcomb,
 			 app.stparse;
 
 void main(string[] args){
-	switch (args[0]){
+	string name = args[0].baseName;
+	switch (name){
 		case "stparse":
 			stparse_main(args);
 			break;
@@ -26,6 +28,6 @@ void main(string[] args){
 			sthtml_main(args);
 			break;
 		default:
-			stderr.writefln!"Invalid argv[0] `%s` for multi-call binary"(args[0]);
+			stderr.writefln!"Invalid argv[0] `%s` for multi-call binary"(name);
 	}
 }
