@@ -26,7 +26,7 @@ public:
 	size_t sidCount;
 	/// maps names to sids
 	size_t[Tuple!(string, string)] sids;
-	/// maps sids to sids range for its course (start, count)
+	/// maps cids to sids range for its course (start, count)
 	/// picks range. i.e (start, count) for sids of same course
 	Tuple!(size_t, size_t)[] cidsRange;
 
