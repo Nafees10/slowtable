@@ -17,16 +17,10 @@ private struct RGB{
 		this.b = b;
 	}
 
-	this(string hex){
-		fromHex(hex);
-	}
-
-	/// decode from hex
-	void fromHex(string s){
-		size_t code = readHexadecimal(s);
-		b = code & ubyte.max;
-		g = (code >> 8) & ubyte.max;
-		r = (code >> 16) & ubyte.max;
+	this(uint rgb) pure {
+		this.r = (rgb >> 16) & 255;
+		this.g = (rgb >> 8) & 255;
+		this.b = rgb & 255;
 	}
 
 	/// Returns: luminance
@@ -46,55 +40,58 @@ private struct RGB{
 	}
 }
 
-private RGB[] COLORS;
-
-shared static this(){
-	COLORS = [
-		RGB("a2b9bc"),
-		RGB("6b5b95"),
-		RGB("b2ad7f"),
-		RGB("feb236"),
-		RGB("d64161"),
-		RGB("86af49"),
-		RGB("b5e7a0"),
-		RGB("eca1a6"),
-		RGB("bdcebe"),
-		RGB("ada397"),
-		RGB("e3eaa7"),
-		RGB("405d27"),
-		RGB("3e4444"),
-		RGB("b9936c"),
-		RGB("92a8d1"),
-		RGB("034f84"),
-		RGB("50394c"),
-		RGB("80ced6"),
-		RGB("618685"),
-	];
-}
+private enum uint[] COLORS = [
+	0xa2b9bc,
+	0x6b5b95,
+	0xb2ad7f,
+	0xfeb236,
+	0xd64161,
+	0x86af49,
+	0xb5e7a0,
+	0xeca1a6,
+	0xbdcebe,
+	0xada397,
+	0xe3eaa7,
+	0x405d27,
+	0x3e4444,
+	0xb9936c,
+	0x92a8d1,
+	0x034f84,
+	0x50394c,
+	0x80ced6,
+	0x618685,
+];
 
 /// Generates css color styles for sections
 /// Returns: css color styles for section string
-private string[string] colorize(Class[] classes){
-	string[string] ret;
+private size_t[string] colorize(uint[] Colors = COLORS)(Class[] classes){
+	size_t[string] ret;
 	foreach (c; classes){
 		if (c.section in ret)
 			continue;
-		ret[c.section] = COLORS[ret.length % $].toCSS;
+		ret[c.section] = ret.length % Colors.length;
 	}
 	return ret;
 }
 
 /// style tag for table
-enum HTML_STYLE =
+template HTML_STYLE(uint[] Colors = COLORS){
+	enum HTML_STYLE = generateStyleStr();
+	string generateStyleStr(){
+		string ret =
 `<style>
-table{border-collapse:collapse;text-align:center;width:100%;}
+table{border-collapse:collapse;text-align:center;width:100%;border:solid 1px;}
 table td, table th{border:1px solid black;}
 table tr:first-child th{border-top:0;}
 table tr:last-child td{border-bottom:0;}
 table tr td:first-child,table tr th:first-child{border-left:0;}
 table tr td:last-child,table tr th:last-child{border-right:0;}
-tr:nth-child(even){background-color:#f2f2f2;}
-</style>`;
+tr:nth-child(even){background-color:#f2f2f2;}`.replace("\n","");
+		foreach (i, color; Colors)
+			ret ~= format!".c%d {%s} "(i, RGB(Colors[i]).toCSS);
+		return ret ~ "</style>";
+	}
+}
 
 /// Generates a HTML table for classes
 string generateTable(Class[] classesUnsorted, uint interval = 10){
@@ -108,10 +105,10 @@ string generateTable(Class[] classesUnsorted, uint interval = 10){
 			classesByVenue.sortByTime;
 	}
 
-	string[string] colors = colorize(classesUnsorted);
+	size_t[string] colors = colorize!()(classesUnsorted);
 
 	// populate the whole table
-	ret ~= "<table style='width:100%;border:solid 1px;'>";
+	ret ~= "<table>";
 	const uint minutesMax = (timeMax.hour + 1) * 60 + timeMax.minute;
 	foreach (dayI; DayOfWeek.mon .. DayOfWeek.sat + 1){
 		const DayOfWeek day = cast(DayOfWeek)dayI;
@@ -125,7 +122,9 @@ string generateTable(Class[] classesUnsorted, uint interval = 10){
 		foreach (hour; timeMin.hour .. timeMax.hour + 1){
 			foreach (minute; 0 .. 60 / interval){
 				minute *= interval;
-				ret ~= "<th style='table-style:fixed;'>" ~ minute.to!string ~ "</th>";
+				// TODO: what does table-style: fixed even do????
+				//ret ~= "<th style='table-style:fixed;'>" ~ minute.to!string ~ "</th>";
+				ret ~= "<th>" ~ minute.to!string ~ "</th>";
 			}
 		}
 		ret ~= "<tr><th rowspan=" ~ classes[day].length.to!string ~ ">" ~
@@ -140,7 +139,7 @@ string generateTable(Class[] classesUnsorted, uint interval = 10){
 					ret ~= "<td colspan=" ~ ((minutes - x) / interval).to!string ~
 						"></td>";
 				}
-				ret ~= "<td style=\"" ~ colors[c.section] ~ "\" colspan=" ~
+				ret ~= "<td class=c" ~ colors[c.section].to!string ~ " colspan=" ~
 					(c.duration.total!"minutes" / interval).to!string ~ ">" ~
 					c.name ~ " - " ~ c.section ~ "</td>";
 				x = minutes + cast(uint)c.duration.total!"minutes";

@@ -17,7 +17,7 @@ void sthtml_main(string[] args){
 					interval.to!string);
 		}
 	}
-	writeln(HTML_STYLE);
+	writeln(HTML_STYLE!());
 
 	while (!stdin.eof){
 		string line = readln.chomp("\n");
