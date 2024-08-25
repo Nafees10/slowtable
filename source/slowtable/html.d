@@ -6,7 +6,6 @@ import std.algorithm,
 			 std.conv;
 
 import slowtable.common;
-import utils.misc : readHexadecimal;
 
 private struct RGB{
 	ubyte r, g, b;
