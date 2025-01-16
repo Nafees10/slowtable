@@ -25,15 +25,17 @@ public:
 	/// number of section ids
 	size_t sidCount;
 	/// maps names to sids
-	size_t[Tuple!(string, string)] sids;
+	size_t[Tuple!(string, string)] sidByName;
 	/// maps cids to sids range for its course (start, count)
 	/// picks range. i.e (start, count) for sids of same course
 	Tuple!(size_t, size_t)[] cidsRange;
+	/// maps sid to its cid
+	size_t[] cidOfSid;
 
 	/// maps sid to (courseName, sectionName)
-	Tuple!(string, string)[] names;
+	Tuple!(string, string)[] namesBySid;
 	/// maps sid to Class[], sessions of this sid
-	Class[][] sessions;
+	Class[][] sessionsBySid;
 
 	/// constructor
 	this(Timetable tt) pure {
@@ -50,10 +52,11 @@ public:
 	void reset() pure {
 		sidCount = 0;
 		clashMatrix = null;
-		sids = null;
+		sidByName = null;
 		cidsRange = null;
-		names = null;
-		sessions = null;
+		cidOfSid = null;
+		namesBySid = null;
+		sessionsBySid = null;
 	}
 
 	/// Builds this object from Class[].
@@ -72,19 +75,22 @@ public:
 		}
 
 		// build sids, sidsRange, names, and sessions
-		sessions.length = sidCount;
-		names.length = sidCount;
+		sessionsBySid.length = sidCount;
+		cidOfSid.length = sidCount;
+		namesBySid.length = sidCount;
 		cidsRange.length = categ.keys.length;
 		size_t sidNext;
 		size_t courseI;
 		foreach (string course, Class[][string] sections; categ){
-			cidsRange[courseI ++] = tuple(sidNext, sections.keys.length);
+			cidsRange[courseI] = tuple(sidNext, sections.keys.length);
 			foreach (string section, Class[] classes; sections){
-				sids[tuple(course, section)] = sidNext;
-				names[sidNext] = tuple(course, section);
-				sessions[sidNext] = classes;
+				sidByName[tuple(course, section)] = sidNext;
+				namesBySid[sidNext] = tuple(course, section);
+				sessionsBySid[sidNext] = classes;
+				cidOfSid[sidNext] = courseI;
 				sidNext ++;
 			}
+			courseI ++;
 		}
 		assert (sidNext == sidCount);
 
@@ -98,9 +104,9 @@ public:
 
 		/// build clashMatrix
 		foreach (Class a; tt){
-			immutable size_t sidA = sids[tuple(a.name, a.section)];
+			immutable size_t sidA = sidByName[tuple(a.name, a.section)];
 			foreach (Class b; tt){
-				immutable size_t sidB = sids[tuple(b.name, b.section)];
+				immutable size_t sidB = sidByName[tuple(b.name, b.section)];
 				clashMatrix[sidA][sidB] = clashMatrix[sidA][sidB] && !a.overlaps(b);
 			}
 		}
@@ -125,14 +131,14 @@ struct ScoreDev{
 		dc[] = parent.dc;
 		dv = parent.dv;
 		// update mt and dc
-		foreach (Class c; map.sessions[pick]){
+		foreach (Class c; map.sessionsBySid[pick]){
 			immutable size_t time =
 				c.time.second + 60 * (c.time.minute + (60 * c.time.hour));
 			mt[c.day] = ((mt[c.day] * dc[c.day]) + time) / (dc[c.day] + 1);
 			dc[c.day] ++;
 		}
 		// update dv
-		foreach (Class c; map.sessions[pick]){
+		foreach (Class c; map.sessionsBySid[pick]){
 			immutable size_t time =
 				c.time.second + 60 * (c.time.minute + (60 * c.time.hour));
 			dv += abs(mt[c.day] - time);
@@ -173,6 +179,10 @@ public:
 		picks.put(parent.picks.keys);
 		picks.put(pick);
 		score = Score(_map, parent.score, pick);
+		// clash with entire course
+		immutable Tuple!(size_t, size_t) range = _map.cidsRange[_map.cidOfSid[pick]];
+		foreach (size_t sid; iota(range[0], range[1]))
+			_clash &= _map.clashMatrix[sid];
 	}
 
 	/// Returns: range of next nodes after this
