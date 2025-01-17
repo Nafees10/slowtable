@@ -180,7 +180,14 @@ cat BSE-5 | sthtml > BSE-5.html
 Takes input timetables, and outputs all possible non-clashing combinations,
 sorted from best to worst.
 
-It takes one optional argument: maximum number of combinations to generate.
+**Parameters: (optional)**
+
+- `-c maxCount` - maxCount is integer, of maximum number of output combination
+	timetables. Default 200.
+- `a,b,c [-k K]` - from among `a,b,c` pick `K`
+
+The `-k` option is useful when you have to select multiple electives from a
+given pool.
 
 Example:
 
