@@ -12,7 +12,66 @@ import slowtable.combinator, slowtable.common;
 
 alias Node = slowtable.combinator.Node;
 
+private struct Opts{
+	string[][] sel;
+	size_t maxComb = 200;
+
+	public static Opts parse(string[] args){
+		Opts ret;
+		string prev;
+		for (size_t i = 0; i < args.length; i ++){
+			switch (args[i]){
+				case "-c", "--count", "--max":
+					if (i + 1 >= args.length) {
+						stderr.writefln!"Missing value for -c / --count / --max";
+						exit(1);
+					}
+					try {
+						ret.maxComb = args[i + 1].to!size_t;
+					} catch (Exception e) {
+						stderr.writefln!"Invalid value for max -c / --count / --max.";
+						exit(1);
+					}
+					i ++;
+					break;
+				case "-k", "--pick":
+					if (!prev) {
+						stderr.writefln!"Missing selection for -k / -pick";
+						exit(1);
+					}
+					if (i + 1 >= args.length){
+						stderr.writefln!"Missing value for -k / --pick";
+						exit(1);
+					}
+					size_t count;
+					try {
+						count = args[i + 1].to!size_t;
+					} catch (Exception e) {
+						stderr.writefln!"Invalid value for -k / -- pick";
+						exit(1);
+					}
+					string[] splits = prev.split(",");
+					if (splits.length){
+						foreach (j; 0 .. count)
+							ret.sel ~= splits;
+					}
+					prev = null;
+					i ++;
+					break;
+				default:
+					if (prev)
+						ret.sel ~= prev.split(",");
+					prev = args[i];
+			}
+		}
+		if (prev)
+			ret.sel ~= prev.split(",");
+		return ret;
+	}
+}
+
 void stcomb_main(string[] args){
+	Opts opts = Opts.parse(args[1 .. $]);
 	File input = stdin;//File("tt");
 	ClassMap map = new ClassMap();
 	if (args.canFind("--help") || args.canFind("-h")){
@@ -20,20 +79,6 @@ void stcomb_main(string[] args){
 				args[0]);
 		exit(0);
 	}
-
-	size_t maxC = 200;
-	if (args.length > 1){
-		try{
-			maxC = args[1].to!size_t;
-		} catch (Exception e){
-			stderr.writefln!"Expected integer for maxCombinations, found `%s`"(maxC);
-			exit(1);
-		}
-	}
-
-	string[][] sel;
-	if (args.length > 2)
-		sel = args[2 .. $].map!(s => s.split(",")).array;
 
 	while (!input.eof){
 		Timetable tt = Timetable.parse(input.byLineCopy);
@@ -43,7 +88,7 @@ void stcomb_main(string[] args){
 		map.build(tt.classes);
 
 		size_t count = 0;
-		size_t[][] sids = getSids(map, sel);
+		size_t[][] sids = getSids(map, opts.sel);
 		stderr.writefln!"sids: %s"(sids);
 		foreach (Node!ScoreDev node; Combinator!ScoreDev(map, sids)){
 			writefln!"%s combination %d"(tt.name, count);
@@ -52,7 +97,7 @@ void stcomb_main(string[] args){
 					c.serialize.writeln();
 			}
 			writefln!"over";
-			if (++count >= maxC)
+			if (++count >= opts.maxComb)
 				break;
 		}
 	}
