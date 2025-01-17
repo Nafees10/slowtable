@@ -75,8 +75,9 @@ void stcomb_main(string[] args){
 	File input = stdin;//File("tt");
 	ClassMap map = new ClassMap();
 	if (args.canFind("--help") || args.canFind("-h")){
-		writefln!"Usage:\n\t%s [maxCombinations] [electiveA,electiveB] ..."(
-				args[0]);
+		stderr.writefln!"Usage:\n\t%s [options]\nOptions:"(args[0]);
+		stderr.writefln!"\t-c/--count/--max\tSpecify maximum combinations";
+		stderr.writefln!"\ta,b,c -k/--pick \tSpecify how many to pick from a,b,c";
 		exit(0);
 	}
 
@@ -89,7 +90,6 @@ void stcomb_main(string[] args){
 
 		size_t count = 0;
 		size_t[][] sids = getSids(map, opts.sel);
-		stderr.writefln!"sids: %s"(sids);
 		foreach (Node!ScoreDev node; Combinator!ScoreDev(map, sids)){
 			writefln!"%s combination %d"(tt.name, count);
 			foreach (size_t sid; node.picks.keys){
