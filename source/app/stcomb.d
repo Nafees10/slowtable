@@ -6,11 +6,53 @@ import std.stdio,
 			 std.array,
 			 std.regex,
 			 std.algorithm;
-import core.stdc.stdlib : exit;
-import utils.ds, utils.misc;
-import slowtable.combinator, slowtable.common;
 
-alias Node = slowtable.combinator.Node;
+import core.stdc.stdlib : exit;
+
+import utils.ds;
+
+import slowtable.combinator,
+			 slowtable.common;
+
+/// Default scoring system for Timetables. Use `S` to be `ClassMap`
+/// Optimizes for:
+/// - least number of days
+/// - classes closest together
+private struct Scorer{
+	/// mean times for each day
+	private float[7] mt = 0;
+	/// session counts for each day
+	private size_t[7] dc = 0;
+	/// sum of deviations from mean
+	private float dv = 0;
+	/// score used to determine how good this combination is
+	public float score = 0;
+
+	this(const ClassMap cMap, const Scorer parent, size_t pick) {
+		import std.math : abs;
+		mt[] = parent.mt;
+		dc[] = parent.dc;
+		dv = parent.dv;
+		// update mt and dc
+		foreach (Class c; cMap.sessionsBySection[pick]){
+			immutable size_t time =
+				c.time.second + 60 * (c.time.minute + (60 * c.time.hour));
+			mt[c.day] = ((mt[c.day] * dc[c.day]) + time) / (dc[c.day] + 1);
+			dc[c.day] ++;
+		}
+		// update dv
+		foreach (Class c; cMap.sessionsBySection[pick]){
+			immutable size_t time =
+				c.time.second + 60 * (c.time.minute + (60 * c.time.hour));
+			dv += abs(mt[c.day] - time);
+		}
+		// count days, score = n(days) * dv
+		immutable size_t days =
+			(cast(size_t[])dc).map!(d => cast(ubyte)(d != 0)).sum;
+		if (days)
+			score = dv * days + (days << 16);
+	}
+}
 
 void stcomb_main(string[] args){
 	File input = stdin;//File("tt");
@@ -49,10 +91,11 @@ void stcomb_main(string[] args){
 
 		size_t count = 0;
 		size_t[][] sids = getSids(cMap, sel);
-		foreach (Node!ScoreDev node; Combinator!ScoreDev(cMap, sids)){
+
+		foreach (node; cMap.combinations!Scorer(cMap.clashMatrix, sids)){
 			writefln!"%s combination %d"(tt.name, count);
 			foreach (size_t sid; node.picks.keys){
-				foreach (Class c; cMap.sessionsBySid[sid])
+				foreach (Class c; cMap.sessionsBySection[sid])
 					c.serialize.writeln();
 			}
 			writefln!"over";
@@ -68,20 +111,28 @@ size_t[][] getSids(ClassMap map, string[][] sel){
 	foreach (selI; sel){
 		size_t[] block;
 		foreach (expr; selI){
-			foreach (cid; map.cidsRange.length.iota.filter!(i =>
-						matchFirst(map.namesBySid[map.cidsRange[i][0]][0], expr))){
-				picked.put(map.namesBySid[map.cidsRange[cid][0]][0]);
-				block ~= iota(map.cidsRange[cid][0],
-						map.cidsRange[cid][0] + map.cidsRange[cid][1]).array;
+			foreach (cid; map.courseSectionsRanges.length.iota.filter!(i =>
+						matchFirst(
+							map.namesBySid[map.courseSectionsRanges[i][0]][0], expr))){
+				picked.put(map.namesBySid[map.courseSectionsRanges[cid][0]][0]);
+				block ~= iota(
+						map.courseSectionsRanges[cid][0],
+						map.courseSectionsRanges[cid][0] +
+						map.courseSectionsRanges[cid][1])
+					.array;
 			}
 		}
 		ret ~= block;
 	}
 
-	ret ~= map.cidsRange.length.iota
-		.filter!(i => !picked.exists(map.namesBySid[map.cidsRange[i][0]][0]))
-		.map!(i => iota(map.cidsRange[i][0],
-					map.cidsRange[i][0] + map.cidsRange[i][1]).array)
+	ret ~= map.courseSectionsRanges.length.iota
+		.filter!(i => !picked.exists(
+					map.namesBySid[map.courseSectionsRanges[i][0]][0]))
+		.map!(i => iota(
+					map.courseSectionsRanges[i][0],
+					map.courseSectionsRanges[i][0] +
+					map.courseSectionsRanges[i][1])
+				.array)
 		.array;
 	return ret;
 }

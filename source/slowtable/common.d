@@ -1,6 +1,8 @@
 module slowtable.common;
 
 import std.algorithm,
+			 std.typecons,
+			 std.bitmanip,
 			 std.datetime,
 			 std.format,
 			 std.string,

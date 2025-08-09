@@ -10,7 +10,8 @@ targetPath "./bin"
 targetName "slowtable"
 configuration "library" {
 	targetType "library"
-	excludedSourceFiles "source/app/*.d"
+	//excludedSourceFiles "source/app/*.d"
+	excludedSourceFiles "source/app/app.d"
 }
 configuration "app" {
 	targetType "executable"
