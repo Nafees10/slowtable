@@ -180,9 +180,11 @@ public:
 		picks.put(pick);
 		score = Score(_map, parent.score, pick);
 		// clash with entire course
+		/* TODO: Is this even needed? uncomment if weird things happen
 		immutable Tuple!(size_t, size_t) range = _map.cidsRange[_map.cidOfSid[pick]];
 		foreach (size_t sid; iota(range[0], range[1]))
 			_clash &= _map.clashMatrix[sid];
+		 */
 	}
 
 	/// Returns: range of next nodes after this
