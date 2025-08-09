@@ -111,10 +111,14 @@ size_t[][] getSids(ClassMap map, string[][] sel){
 	foreach (selI; sel){
 		size_t[] block;
 		foreach (expr; selI){
-			foreach (cid; map.courseSectionsRanges.length.iota.filter!(i =>
+			// go over course indexes where course name matches expr
+			foreach (cid; map.courseSectionsRanges.length
+					.iota.filter!(i =>
 						matchFirst(
-							map.namesBySid[map.courseSectionsRanges[i][0]][0], expr))){
+							map.namesBySid[map.courseSectionsRanges[i][0]][0],
+							expr))){
 				picked.put(map.namesBySid[map.courseSectionsRanges[cid][0]][0]);
+				// add it's section IDs to a selection block
 				block ~= iota(
 						map.courseSectionsRanges[cid][0],
 						map.courseSectionsRanges[cid][0] +
@@ -122,11 +126,14 @@ size_t[][] getSids(ClassMap map, string[][] sel){
 					.array;
 			}
 		}
+		// selection blok is done
 		ret ~= block;
 	}
 
-	ret ~= map.courseSectionsRanges.length.iota
-		.filter!(i => !picked.exists(
+	// go over course indexes that were not selected, add them as individual
+	// blocks
+	ret ~= map.courseSectionsRanges.length
+		.iota.filter!(i => !picked.exists(
 					map.namesBySid[map.courseSectionsRanges[i][0]][0]))
 		.map!(i => iota(
 					map.courseSectionsRanges[i][0],
