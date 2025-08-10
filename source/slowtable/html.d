@@ -137,9 +137,9 @@ public string generateTable(Class[] classesUnsorted, uint interval = 10){
 						"></td>";
 				}
 				ret ~= "<td class=c" ~ colors[c.section].to!string ~ " colspan=" ~
-					(c.duration.total!"minutes" / interval).to!string ~ ">" ~
+					(c.duration / interval).to!string ~ ">" ~
 					c.name ~ " - " ~ c.section ~ "</td>";
-				x = minutes + cast(uint)c.duration.total!"minutes";
+				x = minutes + c.duration;
 			}
 			if (minutesMax > x){
 				ret ~= "<td colspan=" ~ ((minutesMax - x) / interval).to!string ~

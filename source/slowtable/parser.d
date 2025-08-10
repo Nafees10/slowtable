@@ -55,7 +55,7 @@ private:
 		string[2] secClass = separateSectionCourse(_row[_rowInd]);
 		Class ret = Class(_day,
 				_scale.at(_rowInd),
-				_scale.duration(_rowInd, count),
+				cast(uint)_scale.duration(_rowInd, count).total!"minutes",
 				secClass[1].nameClean, secClass[0], _row[1]
 				);
 		_rowInd += count;

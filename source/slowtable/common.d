@@ -17,17 +17,8 @@ public struct Class{
 	DayOfWeek day;
 	/// when
 	TimeOfDay time;
-	/// duration
-	Duration duration;
-
-	/// duration in seconds
-	@property duration_s() const pure {
-		return duration.total!"seconds";
-	}
-	@property duration_s(size_t dur) pure {
-		return duration = dur.dur!"seconds";
-	}
-
+	/// duration, in minutes
+	uint duration;
 	/// course name
 	string name;
 	/// section
@@ -38,14 +29,14 @@ public struct Class{
 	/// Returns: string representation as `{name section venue (day, start-end)}`
 	string toString() const {
 		return format!"{%s %s %s (%s, %s-%s)}"(
-				name, section, venue, day, time, time + duration);
+				name, section, venue, day, time, time + duration.dur!"minutes");
 	}
 
 	/// Serializes into a tab separated line
 	/// `name section venue day time duration(minutes)`
 	string serialize() const {
 		return format!"\t%s\t%s\t%s\t%s\t%s\t%d"(
-				name, section, venue, day, time.toISOString, duration.total!"minutes");
+				name, section, venue, day, time.toISOString, duration);
 	}
 
 	/// Deserialize from a tab separated line
@@ -64,7 +55,7 @@ public struct Class{
 			ret.venue = vals[2];
 			ret.day = vals[3].to!DayOfWeek;
 			ret.time = TimeOfDay.fromISOString(vals[4]);
-			ret.duration = dur!"minutes"(vals[5].to!uint);
+			ret.duration = vals[5].to!uint;
 		} catch (Exception){
 			throw new Exception("Invalid format");
 		}
@@ -97,7 +88,7 @@ public struct Class{
 		return ret;
 	}
 
-	this (DayOfWeek day, TimeOfDay time, Duration duration, string name,
+	this (DayOfWeek day, TimeOfDay time, uint duration, string name,
 			string section, string venue) pure {
 		this.day = day;
 		this.time = time;
@@ -187,8 +178,8 @@ public TimeOfDay[2] timeMinMax(Class[] classes) pure {
 	foreach (c; classes){
 		if (c.time < min)
 			min = c.time;
-		if (c.time + c.duration > max)
-			max = c.time + c.duration;
+		if (c.time + c.duration.dur!"minutes" > max)
+			max = c.time + c.duration.dur!"minutes";
 	}
 	return [min, max];
 }
@@ -199,7 +190,8 @@ public TimeOfDay[2] timeMinMax(Class[] classes) pure {
 /// Returns: true if clashes
 public bool overlaps(Class a, Class b) pure {
 	return a.day == b.day &&
-		a.time < b.time + b.duration && b.time < a.time + a.duration;
+		a.time < b.time + b.duration.dur!"minutes" &&
+		b.time < a.time + a.duration.dur!"minutes";
 }
 
 /// Cleans up a name/section string
