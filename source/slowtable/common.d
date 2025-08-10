@@ -19,6 +19,15 @@ public struct Class{
 	TimeOfDay time;
 	/// duration
 	Duration duration;
+
+	/// duration in seconds
+	@property duration_s() const pure {
+		return duration.total!"seconds";
+	}
+	@property duration_s(size_t dur) pure {
+		return duration = dur.dur!"seconds";
+	}
+
 	/// course name
 	string name;
 	/// section
