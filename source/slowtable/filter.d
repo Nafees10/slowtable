@@ -5,7 +5,7 @@ import std.regex;
 import slowtable.common;
 
 /// set of filters
-struct Filters{
+public struct Filters{
 	/// relevant courses. null -> all relevant
 	string[] coursesRel;
 	/// relevant sections. null -> all relevant
@@ -23,7 +23,7 @@ struct Filters{
 /// Attempts to match a section course combo to Filters
 ///
 /// Returns: true if matches, false if not
-bool matches(Filters filters, Class c){
+public bool matches(Filters filters, Class c){
 	return matches(filters, c.section, c.name);
 }
 

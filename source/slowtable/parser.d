@@ -16,7 +16,7 @@ import utils.misc : isAlphabet, isNum;
 private enum Offset = 2;
 
 /// Parser for timetable
-struct Parser{
+public struct Parser{
 private:
 	/// sheet
 	ODSSheet _sheet;
@@ -56,7 +56,7 @@ private:
 		Class ret = Class(_day,
 				_scale.at(_rowInd),
 				_scale.duration(_rowInd, count),
-				secClass[1].clean, secClass[0], _row[1]
+				secClass[1].nameClean, secClass[0], _row[1]
 				);
 		_rowInd += count;
 		return ret;
@@ -110,7 +110,7 @@ public:
 /// Finds DayOfWeek from sheet string
 /// Returns: DayOfWeek
 /// Throws: Exception if not found
-DayOfWeek readDay(string str) pure {
+private DayOfWeek readDay(string str) pure {
 	if (str.canFind("Monday"))
 		return DayOfWeek.mon;
 	if (str.canFind("Tuesday"))
@@ -129,7 +129,7 @@ DayOfWeek readDay(string str) pure {
 }
 
 /// Returns: true if readDay was successful
-bool tryReadDay(string str, ref DayOfWeek day){
+private bool tryReadDay(string str, ref DayOfWeek day){
 	try{
 		day = readDay(str);
 		return true;
@@ -138,14 +138,14 @@ bool tryReadDay(string str, ref DayOfWeek day){
 	}
 }
 /// ditto
-bool tryReadDay(string str){
+private bool tryReadDay(string str){
 	DayOfWeek dummy;
 	return tryReadDay(str, dummy);
 }
 
 /// counts how many times, consecutive, the first element occurs
 /// Returns: count, or 0 if array length 0
-uint countConsecutive(T)(T[] array) pure {
+private uint countConsecutive(T)(T[] array) pure {
 	uint ret;
 	foreach (elem; array){
 		if (elem == array[0])
@@ -157,7 +157,7 @@ uint countConsecutive(T)(T[] array) pure {
 }
 
 /// Time scale
-struct TimeScale{
+private struct TimeScale{
 	TimeOfDay start; /// starting time
 	Duration[] add; /// how much to add at some index to get time covered
 	/// Time at some index
@@ -184,7 +184,7 @@ struct TimeScale{
 /// Parses TimeScale from a ODSSheet
 /// Throws: Exception if TimeScale looks bad
 /// Returns: TimeScale
-TimeScale parseTimeScale(ODSSheet sheet, TimeOfDay start){
+private TimeScale parseTimeScale(ODSSheet sheet, TimeOfDay start){
 	string[] mins;
 	size_t hOffset = size_t.max;
 	foreach (row; sheet){

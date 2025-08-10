@@ -74,7 +74,7 @@ private size_t[string] colorize(uint[] Colors = COLORS)(Class[] classes){
 }
 
 /// style tag for table
-template HTML_STYLE(uint[] Colors = COLORS){
+public template HTML_STYLE(uint[] Colors = COLORS){
 	enum HTML_STYLE = generateStyleStr();
 	string generateStyleStr(){
 		string ret =
@@ -93,7 +93,7 @@ tr:nth-child(even){background-color:#f2f2f2;}`.replace("\n","");
 }
 
 /// Generates a HTML table for classes
-string generateTable(Class[] classesUnsorted, uint interval = 10){
+public string generateTable(Class[] classesUnsorted, uint interval = 10){
 	TimeOfDay[2] timeExtremes = classesUnsorted.timeMinMax;
 	TimeOfDay timeMin = timeExtremes[0], timeMax = timeExtremes[1];
 	string ret;
@@ -121,8 +121,6 @@ string generateTable(Class[] classesUnsorted, uint interval = 10){
 		foreach (hour; timeMin.hour .. timeMax.hour + 1){
 			foreach (minute; 0 .. 60 / interval){
 				minute *= interval;
-				// TODO: what does table-style: fixed even do????
-				//ret ~= "<th style='table-style:fixed;'>" ~ minute.to!string ~ "</th>";
 				ret ~= "<th>" ~ minute.to!string ~ "</th>";
 			}
 		}

@@ -23,7 +23,7 @@ void stdelab_main(string[]){
 			}
 			if (c.name.length >= 3 && c.name[$ - 3 .. $] == "lab"){
 				c.name.length -= 3;
-				c.name = c.name.clean;
+				c.name = c.name.nameClean;
 				ptrdiff_t index = c.section.indexOf(",");
 				if (index > 0)
 					c.section = c.section[0 .. index];

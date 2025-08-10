@@ -12,7 +12,7 @@ import std.algorithm,
 			 std.uni;
 
 /// Stores information about a single class session
-struct Class{
+public struct Class{
 	/// day this occurs
 	DayOfWeek day;
 	/// when
@@ -67,7 +67,7 @@ struct Class{
 		if (name.length < 3 || name[$ - 3 .. $] != "lab")
 			return;
 		name.length -= 3;
-		name = name.clean;
+		name = name.nameClean;
 		ptrdiff_t index = section.indexOf(",");
 		if (index > 0)
 			section = section[0 .. index];
@@ -134,7 +134,7 @@ unittest{
 }
 
 /// A timetable (collection of Classes)
-struct Timetable{
+public struct Timetable{
 	string name;
 	Class[] classes;
 
@@ -159,12 +159,12 @@ struct Timetable{
 }
 
 /// Sorts classes by time
-void sortByTime(ref Class[] classes){
+public void sortByTime(ref Class[] classes){
 	classes.sort!"a.timeEncode < b.timeEncode";
 }
 
 /// Sorts classes by venue and day
-Class[][string][DayOfWeek] sortByVenueDay(Class[] classes) pure {
+public Class[][string][DayOfWeek] sortByVenueDay(Class[] classes) pure {
 	Class[][string][DayOfWeek] ret;
 	foreach (c; classes)
 		ret[c.day][c.venue] ~= c;
@@ -173,7 +173,7 @@ Class[][string][DayOfWeek] sortByVenueDay(Class[] classes) pure {
 
 /// Finds earliest starting time, and latest ending time
 /// Returns: [starting time, ending time]
-TimeOfDay[2] timeMinMax(Class[] classes) pure {
+public TimeOfDay[2] timeMinMax(Class[] classes) pure {
 	TimeOfDay min = TimeOfDay.max, max = TimeOfDay.min;
 	foreach (c; classes){
 		if (c.time < min)
@@ -188,14 +188,14 @@ TimeOfDay[2] timeMinMax(Class[] classes) pure {
 /// check venue
 ///
 /// Returns: true if clashes
-bool overlaps(Class a, Class b) pure {
+public bool overlaps(Class a, Class b) pure {
 	return a.day == b.day &&
 		a.time < b.time + b.duration && b.time < a.time + a.duration;
 }
 
 /// Cleans up a name/section string
 /// Returns: cleaned up string
-string clean(string str) pure {
+public string nameClean(string str) pure {
 	str = str.strip;
 	string ret;
 	bool white = false;
@@ -214,12 +214,12 @@ string clean(string str) pure {
 }
 ///
 unittest{
-	assert("  \tbla \t \n- bla-bla   \t  \n ".clean == "bla bla bla");
+	assert("  \tbla \t \n- bla-bla   \t  \n ".nameClean == "bla bla bla");
 }
 
 /// Separates section from course.
 /// Returns: [section, course], string array length 2
-string[2] separateSectionCourse(string str) pure {
+public string[2] separateSectionCourse(string str) pure {
 	int start = cast(int)str.indexOf('('),
 			end = cast(int)str.indexOf(')');
 	if (start < 0 || end <= start)
