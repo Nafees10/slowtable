@@ -105,25 +105,21 @@ void stcomb_main(string[] args){
 	}
 }
 
-size_t[][] getSids(ClassMap map, string[][] sel){
+size_t[][] getSids(ClassMap cMap, string[][] sel){
 	Set!string picked;
 	size_t[][] ret;
 	foreach (selI; sel){
 		size_t[] block;
 		foreach (expr; selI){
 			// go over course indexes where course name matches expr
-			foreach (cid; map.courseSectionsRanges.length
+			foreach (cid; cMap.courseSectionsRanges.length
 					.iota.filter!(i =>
 						matchFirst(
-							map.namesBySid[map.courseSectionsRanges[i][0]][0],
+							cMap.namesBySection[cMap.courseSectionsRanges[i][0]][0],
 							expr))){
-				picked.put(map.namesBySid[map.courseSectionsRanges[cid][0]][0]);
+				picked.put(cMap.namesBySection[cMap.courseSectionsRanges[cid][0]][0]);
 				// add it's section IDs to a selection block
-				block ~= iota(
-						map.courseSectionsRanges[cid][0],
-						map.courseSectionsRanges[cid][0] +
-						map.courseSectionsRanges[cid][1])
-					.array;
+				block ~= iota(cMap.courseSectionsRanges[cid].expand).array;
 			}
 		}
 		// selection blok is done
@@ -132,14 +128,10 @@ size_t[][] getSids(ClassMap map, string[][] sel){
 
 	// go over course indexes that were not selected, add them as individual
 	// blocks
-	ret ~= map.courseSectionsRanges.length
+	ret ~= cMap.courseSectionsRanges.length
 		.iota.filter!(i => !picked.exists(
-					map.namesBySid[map.courseSectionsRanges[i][0]][0]))
-		.map!(i => iota(
-					map.courseSectionsRanges[i][0],
-					map.courseSectionsRanges[i][0] +
-					map.courseSectionsRanges[i][1])
-				.array)
+					cMap.namesBySection[cMap.courseSectionsRanges[i][0]][0]))
+		.map!(i => iota(cMap.courseSectionsRanges[i].expand).array)
 		.array;
 	return ret;
 }

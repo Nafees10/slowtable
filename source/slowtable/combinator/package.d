@@ -23,17 +23,17 @@ public:
 	BitArray[] clashMatrix;
 
 	/// number of section ids
-	size_t sidCount;
+	size_t sectionCount;
 	/// maps names to sids
 	size_t[Tuple!(string, string)] sectionByName;
 	/// maps cids to sids range for its course (start, count)
 	/// picks range. i.e (start, count) for sids of same course
 	Tuple!(size_t, size_t)[] courseSectionsRanges;
 	/// maps sid to its cid
-	size_t[] cidOfSid;
+	size_t[] courseOfSection;
 
 	/// maps sid to (courseName, sectionName)
-	Tuple!(string, string)[] namesBySid;
+	Tuple!(string, string)[] namesBySection;
 	/// maps sid to Class[], sessions of this sid
 	Class[][] sessionsBySection;
 
@@ -50,12 +50,12 @@ public:
 
 	/// Resets this object
 	void reset() pure {
-		sidCount = 0;
+		sectionCount = 0;
 		clashMatrix = null;
 		sectionByName = null;
 		courseSectionsRanges = null;
-		cidOfSid = null;
-		namesBySid = null;
+		courseOfSection = null;
+		namesBySection = null;
 		sessionsBySection = null;
 	}
 
@@ -69,36 +69,37 @@ public:
 				categ[c.name] = null;
 			if (c.section !in categ[c.name]){
 				categ[c.name][c.section] = null;
-				sidCount ++;
+				sectionCount ++;
 			}
 			categ[c.name][c.section] ~= c;
 		}
 
 		// build sids, sidsRange, names, and sessions
-		sessionsBySection.length = sidCount;
-		cidOfSid.length = sidCount;
-		namesBySid.length = sidCount;
+		sessionsBySection.length = sectionCount;
+		courseOfSection.length = sectionCount;
+		namesBySection.length = sectionCount;
 		courseSectionsRanges.length = categ.keys.length;
 		size_t sidNext;
 		size_t courseI;
 		foreach (string course, Class[][string] sections; categ){
-			courseSectionsRanges[courseI] = tuple(sidNext, sections.keys.length);
+			courseSectionsRanges[courseI] = tuple(sidNext,
+					sidNext + sections.keys.length);
 			foreach (string section, Class[] classes; sections){
 				sectionByName[tuple(course, section)] = sidNext;
-				namesBySid[sidNext] = tuple(course, section);
+				namesBySection[sidNext] = tuple(course, section);
 				sessionsBySection[sidNext] = classes;
-				cidOfSid[sidNext] = courseI;
+				courseOfSection[sidNext] = courseI;
 				sidNext ++;
 			}
 			courseI ++;
 		}
-		assert (sidNext == sidCount);
+		assert (sidNext == sectionCount);
 
-		clashMatrix.length = sidCount;
-		foreach (size_t sid; 0 .. sidCount){
+		clashMatrix.length = sectionCount;
+		foreach (size_t sid; 0 .. sectionCount){
 			clashMatrix[sid] = BitArray(
-					new void[(sidCount + (size_t.sizeof - 1)) / size_t.sizeof],
-					sidCount);
+					new void[(sectionCount + (size_t.sizeof - 1)) / size_t.sizeof],
+					sectionCount);
 			clashMatrix[sid][] = true;
 		}
 
@@ -111,7 +112,7 @@ public:
 			}
 		}
 		// sid always clashes with itself
-		foreach (size_t sid; 0 .. sidCount)
+		foreach (size_t sid; 0 .. sectionCount)
 			clashMatrix[sid][sid] = false;
 	}
 }
